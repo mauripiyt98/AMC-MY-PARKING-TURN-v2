@@ -791,6 +791,368 @@ a {
   margin-top: 0;
 }
 
+/* ================================================================
+   PANEL LATERAL — MODULOS (MENSUALIDADES, etc.)
+   ================================================================ */
+
+.side-module {
+  position: fixed;
+  left: clamp(8px, 2vw, 36px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  width: clamp(130px, 13vw, 196px);
+  background: var(--color-white);
+  border: var(--border-strong);
+  border-radius: 10px;
+  padding: 32px 14px 24px;
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+  display: grid;
+  gap: 18px;
+  overflow: hidden;
+}
+
+/* Barra de color superior igual que los paneles principales */
+.side-module::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8px;
+  background: linear-gradient(90deg, var(--color-red-dark), var(--color-red) 52%, var(--color-warning));
+}
+
+.side-module-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.side-module-title {
+  margin: 0;
+  color: var(--color-red-dark);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.side-module-link {
+  display: block;
+  padding: 11px 8px;
+  border: 1px solid #aab3bd;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffffff, #eef2f6);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-control);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.side-module-link:hover,
+.side-module-link:focus-visible {
+  color: var(--color-red-dark);
+  border-color: var(--color-red-dark);
+  background: var(--color-red-soft);
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   MENSUALIDADES — LAYOUT SUPERIOR (REGISTRO + CALENDARIO)
+   ================================================================ */
+
+.monthly-top-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  justify-content: center;
+  align-items: flex-start;
+  width: min(94vw, 1040px);
+  margin: 28px auto 0;
+}
+
+/* Override del plate-panel para el registro de mensualidades */
+.monthly-reg-panel {
+  width: min(92vw, 420px) !important;
+  margin-top: 0 !important;
+}
+
+.monthly-reg-panel::after {
+  content: "MENSUALIDAD" !important;
+}
+
+/* Campo de fecha dentro del formulario de mensualidades */
+.monthly-date-field input,
+.monthly-rate-field input {
+  width: min(100%, 260px);
+  height: 48px;
+  border: 1px solid #bfc7d0;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffffff, #f9fbfd);
+  color: var(--color-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  padding: 0 14px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.monthly-date-field input:focus,
+.monthly-rate-field input:focus {
+  border-color: var(--color-red);
+  outline: 3px solid rgba(181, 31, 36, 0.15);
+  outline-offset: 0;
+}
+
+/* ================================================================
+   CALENDARIO DE MENSUALIDADES
+   ================================================================ */
+
+.monthly-calendar-section {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 12px;
+}
+
+.monthly-calendar {
+  width: min(92vw, 360px);
+  border: var(--border-strong);
+  border-radius: 10px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, var(--color-red), var(--color-red-dark));
+  color: var(--color-white);
+}
+
+.cal-month-label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--color-white);
+}
+
+.cal-nav-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  color: var(--color-white);
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: background 0.12s;
+}
+
+.cal-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 10px;
+  background: var(--color-panel);
+}
+
+.cal-header-cell {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-muted);
+  padding: 6px 2px 4px;
+}
+
+.cal-day {
+  min-height: 44px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 2px;
+  background: var(--color-white);
+  border: 1px solid transparent;
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.cal-empty {
+  background: transparent;
+  border-color: transparent;
+}
+
+.cal-today {
+  border-color: var(--color-red);
+  background: var(--color-red-soft);
+}
+
+.cal-active {
+  background: rgba(34, 197, 94, 0.10);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.cal-warning-day {
+  background: rgba(244, 182, 63, 0.18);
+  border-color: rgba(244, 182, 63, 0.5);
+}
+
+.cal-expiry {
+  background: rgba(181, 31, 36, 0.08);
+  border-color: rgba(181, 31, 36, 0.35);
+}
+
+.cal-num {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-ink);
+  line-height: 1.4;
+}
+
+.cal-today .cal-num {
+  color: var(--color-red-dark);
+}
+
+.cal-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+  justify-content: center;
+}
+
+.cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  display: block;
+}
+
+.cal-warning-day .cal-dot {
+  background: var(--color-warning);
+}
+
+.cal-expiry .cal-dot {
+  background: var(--color-red);
+}
+
+.cal-dot-more {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+/* Leyenda del calendario */
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  justify-content: center;
+  padding: 6px 4px;
+}
+
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+.cal-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
+}
+
+.cal-legend-active  { background: #22c55e; }
+.cal-legend-warning { background: var(--color-warning); }
+.cal-legend-expiry  { background: var(--color-red); }
+.cal-legend-today   { background: var(--color-red-dark); }
+
+/* ================================================================
+   ESTADO DE MENSUALIDAD (BADGES)
+   ================================================================ */
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-active {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.status-warning {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid var(--color-warning);
+}
+
+.status-expired {
+  color: var(--color-white);
+  background: var(--color-red-dark);
+  border: 1px solid var(--color-red-dark);
+}
+
+/* ================================================================
+   PANELES DE MENSUALIDADES (ajustes de ancho y tabla)
+   ================================================================ */
+
+.monthly-active-panel {
+  width: min(94vw, 1040px) !important;
+  margin-top: 22px;
+}
+
+.monthly-history-panel {
+  width: min(94vw, 1040px) !important;
+  margin-top: 22px;
+}
+
+.monthly-active-table {
+  min-width: 1020px;
+}
+
+.monthly-history-table {
+  min-width: 860px;
+}
+
+.modal-subtext {
+  margin: -8px 0 14px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
 @media (max-width: 820px) {
   .screen {
     padding: 24px 14px 36px;
@@ -853,4 +1215,48 @@ a {
   .charge-summary dd {
     text-align: center;
   }
+
+  /* Ocultar panel lateral en pantallas estrechas */
+  .side-module {
+    display: none;
+  }
 }
+
+/* En pantallas medianas mostrar el panel lateral mas compacto */
+@media (min-width: 821px) and (max-width: 1180px) {
+  .side-module {
+    width: clamp(110px, 11vw, 150px);
+    padding: 28px 10px 20px;
+    gap: 12px;
+  }
+
+  .side-module-icon {
+    font-size: 28px;
+  }
+
+  .side-module-title {
+    font-size: 12px;
+  }
+}
+
+/* En movil: mostrar el panel de modulos como fila horizontal */
+@media (max-width: 820px) {
+  .monthly-top-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .monthly-reg-panel {
+    width: min(92vw, 420px) !important;
+  }
+
+  .monthly-calendar {
+    width: min(92vw, 340px);
+  }
+
+  .monthly-active-panel,
+  .monthly-history-panel {
+    width: min(94vw, 100%) !important;
+  }
+}
+

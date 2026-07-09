@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mensualidades | My Parking Turn</title>
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+  </head>
+  <body>
+    <main class="screen screen-main">
+
+      <header class="brand-header" aria-label="Marca My Parking Turn">
+        <img class="brand-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <h1>MY PARKING TURN</h1>
+      </header>
+
+      <!-- Layout superior: Formulario + Calendario -->
+      <div class="monthly-top-layout">
+
+        <!-- Panel de registro de mensualidad -->
+        <section class="plate-panel monthly-reg-panel" aria-labelledby="monthly-reg-title">
+          <h2 id="monthly-reg-title">REGISTRAR MENSUALIDAD</h2>
+          <form id="monthlyForm" novalidate>
+
+            <label class="field plate-field">
+              <span>PLACA</span>
+              <input id="mPlaca" name="mPlaca" type="text" autocomplete="off" maxlength="8" required>
+            </label>
+
+            <label class="field monthly-date-field">
+              <span>FECHA DE INICIO</span>
+              <input id="mStartDate" name="mStartDate" type="date" required>
+            </label>
+
+            <label class="field monthly-rate-field">
+              <span>VALOR MENSUAL (COP)</span>
+              <input id="mRate" name="mRate" type="text" inputmode="numeric" placeholder="Ej: 80000" autocomplete="off" required>
+            </label>
+
+            <fieldset class="price-selector" aria-label="Tipo de vehiculo">
+              <legend>TIPO DE VEHICULO</legend>
+              <label>
+                <input type="radio" name="mVehicleType" value="moto" data-label="MOTO" required>
+                <span>MOTO</span>
+              </label>
+              <label>
+                <input type="radio" name="mVehicleType" value="carro" data-label="CARRO" required>
+                <span>CARRO</span>
+              </label>
+            </fieldset>
+
+            <p id="mFormMessage" class="form-message" role="alert" aria-live="polite"></p>
+            <button class="primary-action" type="submit">REGISTRAR MENSUALIDAD</button>
+
+          </form>
+        </section>
+
+        <!-- Widget de calendario -->
+        <section class="monthly-calendar-section" aria-label="Calendario de mensualidades activas">
+          <div class="monthly-calendar">
+            <div class="calendar-header">
+              <button id="prevMonthBtn" class="cal-nav-btn" type="button" aria-label="Mes anterior">&#8249;</button>
+              <span id="calendarMonthLabel" class="cal-month-label"></span>
+              <button id="nextMonthBtn" class="cal-nav-btn" type="button" aria-label="Mes siguiente">&#8250;</button>
+            </div>
+            <div id="calendarGrid" class="cal-grid"></div>
+          </div>
+          <div class="cal-legend" aria-label="Leyenda del calendario">
+            <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-active"></span>Activa</span>
+            <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-warning"></span>Vence pronto</span>
+            <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-expiry"></span>Vence este dia</span>
+            <span class="cal-legend-item"><span class="cal-legend-dot cal-legend-today"></span>Hoy</span>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Tabla de mensualidades activas -->
+      <section class="records-panel monthly-active-panel" aria-labelledby="active-monthly-title">
+        <h2 id="active-monthly-title">MENSUALIDADES ACTIVAS</h2>
+        <label class="records-filter" for="mActivePlateFilter">
+          <span>FILTRAR PLACA ACTIVA</span>
+          <input id="mActivePlateFilter" type="search" autocomplete="off" maxlength="8" placeholder="EJ: ABC123">
+        </label>
+        <div class="records-table-wrap">
+          <table class="records-table monthly-active-table">
+            <thead>
+              <tr>
+                <th scope="col">TICKET</th>
+                <th scope="col">PLACA</th>
+                <th scope="col">VEHICULO</th>
+                <th scope="col">FECHA INICIO</th>
+                <th scope="col">FECHA VENCIMIENTO</th>
+                <th scope="col">TARIFA MENSUAL</th>
+                <th scope="col">ESTADO</th>
+                <th scope="col">USUARIO</th>
+                <th scope="col">CERRAR</th>
+                <th scope="col">ELIMINAR</th>
+              </tr>
+            </thead>
+            <tbody id="activeBody">
+              <tr class="empty-record">
+                <td colspan="10">AUN NO HAY MENSUALIDADES REGISTRADAS</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Seccion de historico -->
+      <section class="records-panel report-panel monthly-history-panel" aria-labelledby="history-monthly-title">
+        <h2 id="history-monthly-title">HISTORICO DE MENSUALIDADES</h2>
+
+        <div class="report-filters" role="search" aria-label="Filtrar historico por fechas">
+          <label>
+            <span>DESDE</span>
+            <input id="mStartFilter" type="date">
+          </label>
+          <label>
+            <span>HASTA</span>
+            <input id="mEndFilter" type="date">
+          </label>
+          <button id="mFilterBtn" class="primary-action" type="button">FILTRAR PERIODO</button>
+          <button id="mClearFilterBtn" class="secondary-action" type="button">VER TODO</button>
+        </div>
+
+        <p id="mHistoryMessage" class="form-message" role="alert" aria-live="polite"></p>
+
+        <section class="report-summary" aria-label="Resumen del periodo">
+          <article>
+            <span>PERIODO</span>
+            <strong id="mSummaryPeriod">TODOS LOS HISTORICOS</strong>
+          </article>
+          <article>
+            <span>NUMERO DE TICKETS</span>
+            <strong id="mSummaryTickets">0</strong>
+          </article>
+          <article>
+            <span>TOTAL TARIFAS</span>
+            <strong id="mSummaryTotal">$ 0</strong>
+          </article>
+        </section>
+
+        <div id="historyTableWrap" class="records-table-wrap">
+          <table class="records-table monthly-history-table">
+            <thead>
+              <tr>
+                <th scope="col">TICKET</th>
+                <th scope="col">PLACA</th>
+                <th scope="col">VEHICULO</th>
+                <th scope="col">FECHA INICIO</th>
+                <th scope="col">FECHA CIERRE</th>
+                <th scope="col">TARIFA</th>
+                <th scope="col">MOTIVO</th>
+                <th scope="col">ELIMINAR</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr class="empty-record">
+                <td colspan="8">AUN NO HAY HISTORICOS DE MENSUALIDADES</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <a class="secondary-action report-link" href="../principal.html">VOLVER A TURNOS ACTIVOS</a>
+      <button id="logoutButton" class="logout-action" type="button">CERRAR SESION</button>
+
+    </main>
+
+    <!-- Modal: Confirmar cierre de mensualidad -->
+    <div id="exitModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle" hidden>
+      <section class="modal-box">
+        <h2 id="exitModalTitle">CERRAR MENSUALIDAD</h2>
+        <p id="exitModalText" class="modal-text"></p>
+        <p class="modal-subtext">Esta accion movera la mensualidad al historico.</p>
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" id="cancelExitBtn">NO</button>
+          <button class="danger-action" type="button" id="confirmExitBtn">SI, CERRAR</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Modal: Eliminar registro con contrasena -->
+    <div id="deleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" hidden>
+      <section class="modal-box">
+        <h2 id="deleteModalTitle">ELIMINAR REGISTRO</h2>
+        <form id="deleteForm" novalidate>
+          <label class="field modal-field">
+            <span>CONTRASENA DESARROLLADOR</span>
+            <input id="developerPassword" type="password" autocomplete="current-password" required>
+          </label>
+          <p id="deleteMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <div class="modal-actions">
+            <button class="secondary-action" type="button" id="cancelDeleteBtn">CANCELAR</button>
+            <button class="danger-action" type="submit">ELIMINAR</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <script src="../../assets/js/mensualidades.js"></script>
+  </body>
+</html>
