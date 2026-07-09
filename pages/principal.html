@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pagina principal | My Parking Turn</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+  </head>
+  <body>
+    <main class="screen screen-main">
+      <header class="brand-header" aria-label="Marca My Parking Turn">
+        <img class="brand-logo" src="../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <h1>MY PARKING TURN</h1>
+      </header>
+
+      <section class="plate-panel" aria-labelledby="plate-title">
+        <h2 id="plate-title">INGRESA</h2>
+        <form id="plateForm" novalidate>
+          <label class="field plate-field">
+            <span>PLACA</span>
+            <input id="placa" name="placa" type="text" autocomplete="off" maxlength="8" required>
+          </label>
+
+          <div class="date-box" aria-label="Fecha y hora de generacion del ingreso">
+            <span>FECHA Y HORA DE GENERACION DEL INGRESO</span>
+            <strong id="entryDateTime"></strong>
+          </div>
+
+          <fieldset class="price-selector" aria-label="Tipo de vehiculo y precio">
+            <legend>TIPO DE VEHICULO</legend>
+            <label>
+              <input type="radio" name="vehicleType" value="moto" data-label="MOTO" data-price="1500" required>
+              <span>PRECIO MOTO $1500</span>
+            </label>
+            <label>
+              <input type="radio" name="vehicleType" value="carro" data-label="CARRO" data-price="2500" required>
+              <span>PRECIO CARRO $2500</span>
+            </label>
+          </fieldset>
+
+          <p id="plateMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <button class="primary-action" type="submit">GENERAR TURNO</button>
+        </form>
+      </section>
+
+      <section class="records-panel" aria-labelledby="records-title">
+        <h2 id="records-title">REGISTRO DE TURNOS</h2>
+        <label class="records-filter" for="activePlateFilter">
+          <span>FILTRAR PLACA ACTIVA</span>
+          <input id="activePlateFilter" type="search" autocomplete="off" maxlength="8" placeholder="EJ: ABC123">
+        </label>
+        <div class="records-table-wrap">
+          <table class="records-table">
+            <thead>
+              <tr>
+                <th scope="col">TICKET</th>
+                <th scope="col">PLACA</th>
+                <th scope="col">FECHA</th>
+                <th scope="col">HORA</th>
+                <th scope="col">VEHICULO</th>
+                <th scope="col">PRECIO HORA</th>
+                <th scope="col">USUARIO</th>
+                <th scope="col">SALIDA</th>
+                <th scope="col">ELIMINAR</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody">
+              <tr class="empty-record">
+                <td colspan="9">AUN NO HAY TURNOS REGISTRADOS</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <a class="secondary-action report-link" href="reportes/historicos.html">REPORTE DE HISTORICOS</a>
+
+      <nav class="side-actions side-actions-main" aria-label="Acciones del sistema">
+        <button type="button">SOPORTE</button>
+        <button type="button">CREAR USUARIO</button>
+      </nav>
+
+      <button id="logoutButton" class="logout-action" type="button">CERRAR SESION</button>
+    </main>
+
+    <div id="exitModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle" hidden>
+      <section class="modal-box">
+        <h2 id="exitModalTitle">SEGURO QUE DESEAS DAR SALIDA AL VEHICULO</h2>
+        <p id="exitModalText" class="modal-text"></p>
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" id="cancelExit">NO</button>
+          <button class="danger-action" type="button" id="confirmExit">SI</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="chargeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="chargeModalTitle" hidden>
+      <section class="modal-box charge-modal-box">
+        <h2 id="chargeModalTitle" class="charge-title">COBRAR</h2>
+        <dl class="charge-summary">
+          <div>
+            <dt>PLACA</dt>
+            <dd id="chargePlate"></dd>
+          </div>
+          <div>
+            <dt>FECHA</dt>
+            <dd id="chargeDate"></dd>
+          </div>
+          <div>
+            <dt>HORA INGRESO</dt>
+            <dd id="chargeEntryTime"></dd>
+          </div>
+          <div>
+            <dt>HORA SALIDA</dt>
+            <dd id="chargeExitTime"></dd>
+          </div>
+          <div class="charge-total-row">
+            <dt>VALOR A COBRAR</dt>
+            <dd id="chargeTotal"></dd>
+          </div>
+        </dl>
+        <div class="modal-actions">
+          <button id="generatePdfButton" class="pdf-action" type="button">GENERAR PDF</button>
+          <button id="closeCharge" class="secondary-action" type="button">CERRAR</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" hidden>
+      <section class="modal-box">
+        <h2 id="deleteModalTitle">ELIMINAR REGISTRO</h2>
+        <form id="deleteForm" novalidate>
+          <label class="field modal-field">
+            <span>CONTRASENA DESARROLLADOR</span>
+            <input id="developerPassword" type="password" autocomplete="current-password" required>
+          </label>
+          <p id="deleteMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <div class="modal-actions">
+            <button class="secondary-action" type="button" id="cancelDelete">CANCELAR</button>
+            <button class="danger-action" type="submit">ELIMINAR</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <script src="../assets/js/main.js"></script>
+  </body>
+</html>

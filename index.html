@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inicio de sesion | My Parking Turn</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <main class="screen screen-login">
+      <header class="brand-header" aria-label="Marca My Parking Turn">
+        <img class="brand-logo" src="assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <h1>MY PARKING TURN</h1>
+      </header>
+
+      <section class="login-panel" aria-labelledby="login-title">
+        <h2 id="login-title">INICIO DE SESION</h2>
+        <form id="loginForm" novalidate>
+          <label class="field">
+            <span>USUARIO</span>
+            <input
+              id="usuario"
+              name="usuario"
+              type="text"
+              inputmode="numeric"
+              autocomplete="username"
+              minlength="5"
+              maxlength="10"
+              pattern="[0-9]{5,10}"
+              required
+            >
+          </label>
+
+          <label class="field">
+            <span>CONTRASENA</span>
+            <input
+              id="contrasena"
+              name="contrasena"
+              type="password"
+              autocomplete="current-password"
+              minlength="6"
+              required
+            >
+          </label>
+
+          <p id="loginMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <button class="primary-action" type="submit">INGRESAR</button>
+        </form>
+      </section>
+
+      <nav class="side-actions" aria-label="Acciones de soporte">
+        <button type="button">SOPORTE</button>
+      </nav>
+    </main>
+
+    <script src="assets/js/auth.js"></script>
+  </body>
+</html>
