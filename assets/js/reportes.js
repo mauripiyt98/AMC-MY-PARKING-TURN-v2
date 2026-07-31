@@ -1,35 +1,46 @@
-const reportFilterForm = document.querySelector("#reportFilterForm");
-const startDateInput = document.querySelector("#startDate");
-const endDateInput = document.querySelector("#endDate");
-const clearReportFilter = document.querySelector("#clearReportFilter");
-const reportMessage = document.querySelector("#reportMessage");
-const summaryPeriod = document.querySelector("#summaryPeriod");
-const summaryTickets = document.querySelector("#summaryTickets");
-const summaryTotal = document.querySelector("#summaryTotal");
-const monthlyReports = document.querySelector("#monthlyReports");
-const deleteModal = document.querySelector("#deleteModal");
-const deleteForm = document.querySelector("#deleteForm");
+// ============================================================
+// reportes.js — Modulo de reporte de historicos
+// My Parking Turn v2
+//
+// Dependencias (cargadas antes en el HTML):
+//   1. session-guard.js  — proteccion de ruta
+//   2. storage.js        — capa de datos SaaS
+// ============================================================
+
+// ===== Referencias DOM =====
+const reportFilterForm       = document.querySelector("#reportFilterForm");
+const startDateInput         = document.querySelector("#startDate");
+const endDateInput           = document.querySelector("#endDate");
+const clearReportFilter      = document.querySelector("#clearReportFilter");
+const reportMessage          = document.querySelector("#reportMessage");
+const summaryPeriod          = document.querySelector("#summaryPeriod");
+const summaryTickets         = document.querySelector("#summaryTickets");
+const summaryTotal           = document.querySelector("#summaryTotal");
+const monthlyReports         = document.querySelector("#monthlyReports");
+const deleteModal            = document.querySelector("#deleteModal");
+const deleteForm             = document.querySelector("#deleteForm");
 const developerPasswordInput = document.querySelector("#developerPassword");
-const deleteMessage = document.querySelector("#deleteMessage");
-const cancelDelete = document.querySelector("#cancelDelete");
-const logoutButton = document.querySelector("#logoutButton");
-const recordsStorageKey = "mptPlateRecords";
-const historyStorageKey = "mptPlateHistory";
-const nextTicketStorageKey = "mptNextTicketNumber";
-const developerDeletePassword = "Amc2026*";
+const deleteMessage          = document.querySelector("#deleteMessage");
+const cancelDelete           = document.querySelector("#cancelDelete");
+const logoutButton           = document.querySelector("#logoutButton");
+
+// ===== Estado =====
 let pendingDeleteIndex = null;
 
-function getRecords() {
-  return JSON.parse(localStorage.getItem(recordsStorageKey) || "[]");
-}
+// ================================================================
+// STORAGE — via capa MPTStorage (storage.js)
+// ================================================================
 
-function getHistory() {
-  return JSON.parse(localStorage.getItem(historyStorageKey) || "[]");
-}
+function getRecords()      { return MPTStorage.getRecords(); }
+function getHistory()      { return MPTStorage.getHistory(); }
+function saveHistory(h)    { MPTStorage.saveHistory(h); }
 
-function saveHistory(history) {
-  localStorage.setItem(historyStorageKey, JSON.stringify(history));
-}
+function getStoredNextTicketNumber() { return MPTStorage.getStoredNextTicketNumber(); }
+function saveNextTicketNumber(n)     { MPTStorage.saveNextTicketNumber(n); }
+
+// ================================================================
+// UTILIDADES Y FORMATO
+// ================================================================
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("es-CO", {
@@ -41,20 +52,6 @@ function formatCurrency(value) {
 
 function formatTicket(ticketNumber) {
   return `TICKET ${ticketNumber || "SIN NUMERO"}`;
-}
-
-function getStoredNextTicketNumber() {
-  const storedNextTicketNumber = Number(localStorage.getItem(nextTicketStorageKey));
-
-  if (!Number.isInteger(storedNextTicketNumber) || storedNextTicketNumber < 1) {
-    return 1;
-  }
-
-  return storedNextTicketNumber;
-}
-
-function saveNextTicketNumber(ticketNumber) {
-  localStorage.setItem(nextTicketStorageKey, String(ticketNumber));
 }
 
 function getHighestTicketNumber(records, history) {
@@ -145,31 +142,18 @@ function parseRecordDate(record) {
   }
 
   const spanishMonths = {
-    ene: 0,
-    enero: 0,
-    feb: 1,
-    febrero: 1,
-    mar: 2,
-    marzo: 2,
-    abr: 3,
-    abril: 3,
-    may: 4,
-    mayo: 4,
-    jun: 5,
-    junio: 5,
-    jul: 6,
-    julio: 6,
-    ago: 7,
-    agosto: 7,
-    sep: 8,
-    sept: 8,
-    septiembre: 8,
-    oct: 9,
-    octubre: 9,
-    nov: 10,
-    noviembre: 10,
-    dic: 11,
-    diciembre: 11,
+    ene: 0, enero: 0,
+    feb: 1, febrero: 1,
+    mar: 2, marzo: 2,
+    abr: 3, abril: 3,
+    may: 4, mayo: 4,
+    jun: 5, junio: 5,
+    jul: 6, julio: 6,
+    ago: 7, agosto: 7,
+    sep: 8, sept: 8, septiembre: 8,
+    oct: 9, octubre: 9,
+    nov: 10, noviembre: 10,
+    dic: 11, diciembre: 11,
   };
   const textDate = String(record.date || "")
     .toLowerCase()
@@ -203,7 +187,7 @@ function getReportRows() {
 
 function getFilteredRows() {
   const startDate = getLocalDateFromInput(startDateInput.value);
-  const endDate = getLocalDateFromInput(endDateInput.value, true);
+  const endDate   = getLocalDateFromInput(endDateInput.value, true);
 
   if (startDate && endDate && startDate > endDate) {
     reportMessage.textContent = "La fecha inicial no puede ser mayor que la fecha final.";
@@ -227,7 +211,7 @@ function getFilteredRows() {
 
 function getPeriodLabel() {
   const startDate = getLocalDateFromInput(startDateInput.value);
-  const endDate = getLocalDateFromInput(endDateInput.value);
+  const endDate   = getLocalDateFromInput(endDateInput.value);
 
   if (startDate && endDate) {
     return `${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}`;
@@ -264,7 +248,7 @@ function renderMonthlyTable(group) {
   const monthTotal = group.records.reduce((total, record) => total + Number(record.totalCharged || 0), 0);
   const rows = group.records
     .map((record) => {
-      const hourlyPrice = Number(record.hourlyPrice || 0);
+      const hourlyPrice  = Number(record.hourlyPrice || 0);
       const totalCharged = Number(record.totalCharged || 0);
 
       return `
@@ -310,13 +294,13 @@ function renderMonthlyTable(group) {
 }
 
 function renderReport() {
-  const rows = getFilteredRows();
-  const totalCharged = rows.reduce((total, record) => total + Number(record.totalCharged || 0), 0);
+  const rows          = getFilteredRows();
+  const totalCharged  = rows.reduce((total, record) => total + Number(record.totalCharged || 0), 0);
   const monthlyGroups = [...groupRowsByMonth(rows).values()].sort((a, b) => b.monthDate - a.monthDate);
 
-  summaryPeriod.textContent = getPeriodLabel();
+  summaryPeriod.textContent  = getPeriodLabel();
   summaryTickets.textContent = String(rows.length);
-  summaryTotal.textContent = formatCurrency(totalCharged);
+  summaryTotal.textContent   = formatCurrency(totalCharged);
 
   if (rows.length === 0) {
     monthlyReports.innerHTML = `
@@ -336,6 +320,14 @@ function renderReport() {
   monthlyReports.innerHTML = monthlyGroups.map(renderMonthlyTable).join("");
 }
 
+// ================================================================
+// MODAL: ELIMINAR CON VERIFICACION DE ROL
+//
+// Fase demo: verifica rol "admin" + formato de contrasena.
+// TODO (fase backend): reemplazar por DELETE /api/history/:id
+//   con Authorization: Bearer <token>.
+// ================================================================
+
 function openDeleteModal(index) {
   pendingDeleteIndex = index;
   deleteForm.reset();
@@ -353,7 +345,7 @@ function closeDeleteModal() {
 
 function deleteHistoryRecord(index) {
   const history = getHistory();
-  const record = history[index];
+  const record  = history[index];
 
   if (!record) {
     closeDeleteModal();
@@ -366,6 +358,10 @@ function deleteHistoryRecord(index) {
   reportMessage.textContent = `Registro historico eliminado para la placa ${record.plate}.`;
   renderReport();
 }
+
+// ================================================================
+// EVENTOS
+// ================================================================
 
 reportFilterForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -399,8 +395,18 @@ deleteModal.addEventListener("click", (event) => {
 deleteForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  if (developerPasswordInput.value !== developerDeletePassword) {
-    deleteMessage.textContent = "Contrasena de usuario desarrollador incorrecta.";
+  const userRole = MPTStorage.getActiveUserRole();
+
+  if (userRole !== "admin") {
+    deleteMessage.textContent = "Solo un administrador puede eliminar registros.";
+    developerPasswordInput.focus();
+    return;
+  }
+
+  // Verificar formato de contrasena (sin exponer el valor exacto en codigo)
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
+  if (!passwordPattern.test(developerPasswordInput.value)) {
+    deleteMessage.textContent = "Contrasena incorrecta o formato invalido.";
     developerPasswordInput.focus();
     return;
   }
@@ -409,10 +415,13 @@ deleteForm.addEventListener("submit", (event) => {
 });
 
 logoutButton.addEventListener("click", () => {
-  sessionStorage.removeItem("mptUser");
-  sessionStorage.removeItem("mptUserName");
+  MPTStorage.clearSession();
   window.location.href = "../../index.html";
 });
+
+// ================================================================
+// INICIALIZACION
+// ================================================================
 
 migrateHistoryTicketNumbers();
 renderReport();

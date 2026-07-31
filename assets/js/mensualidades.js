@@ -1,5 +1,10 @@
 // ============================================================
 // mensualidades.js — Modulo de mensualidades My Parking Turn
+// My Parking Turn v2
+//
+// Dependencias (cargadas antes en el HTML):
+//   1. session-guard.js  — proteccion de ruta
+//   2. storage.js        — capa de datos SaaS
 // ============================================================
 
 // ===== Referencias DOM =====
@@ -35,12 +40,6 @@ const deleteMessage        = document.getElementById("deleteMessage");
 const cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
 const logoutButton         = document.getElementById("logoutButton");
 
-// ===== Constantes =====
-const monthlyStorageKey  = "mptMonthlyRecords";
-const monthlyHistoryKey  = "mptMonthlyHistory";
-const monthlyTicketKey   = "mptNextMonthlyTicket";
-const DEV_PASSWORD       = "Amc2026*";
-
 // ===== Estado =====
 let calendarYear    = new Date().getFullYear();
 let calendarMonth   = new Date().getMonth();
@@ -48,37 +47,26 @@ let pendingExitIndex = null;
 let pendingDelete    = null;
 
 // ================================================================
-// STORAGE
+// STORAGE — via capa MPTStorage (storage.js)
 // ================================================================
 
-function getMonthlyRecords() {
-  return JSON.parse(localStorage.getItem(monthlyStorageKey) || "[]");
-}
-
-function saveMonthlyRecords(records) {
-  localStorage.setItem(monthlyStorageKey, JSON.stringify(records));
-}
-
-function getMonthlyHistory() {
-  return JSON.parse(localStorage.getItem(monthlyHistoryKey) || "[]");
-}
-
-function saveMonthlyHistory(history) {
-  localStorage.setItem(monthlyHistoryKey, JSON.stringify(history));
-}
+function getMonthlyRecords()       { return MPTStorage.getMonthlyRecords(); }
+function saveMonthlyRecords(r)     { MPTStorage.saveMonthlyRecords(r); }
+function getMonthlyHistory()       { return MPTStorage.getMonthlyHistory(); }
+function saveMonthlyHistory(h)     { MPTStorage.saveMonthlyHistory(h); }
 
 function getNextTicketNumber() {
   const records = getMonthlyRecords();
   const history = getMonthlyHistory();
-  const stored   = Number(localStorage.getItem(monthlyTicketKey));
-  const highest  = [...records, ...history].reduce(
+  const stored  = MPTStorage.getStoredNextMonthlyTicket();
+  const highest = [...records, ...history].reduce(
     (max, r) => Math.max(max, Number(r.ticketNumber || 0)), 0
   );
   const next = Math.max(
     Number.isInteger(stored) && stored > 0 ? stored : 1,
     highest + 1
   );
-  localStorage.setItem(monthlyTicketKey, String(next + 1));
+  MPTStorage.saveNextMonthlyTicket(next + 1);
   return next;
 }
 
@@ -139,14 +127,10 @@ function getDaysRemaining(expiryDateStr) {
 }
 
 function getStatusInfo(days) {
-  if (days < 0)   return { text: "VENCIDA",      cls: "status-expired" };
-  if (days === 0) return { text: "VENCE HOY",    cls: "status-warning" };
+  if (days < 0)   return { text: "VENCIDA",          cls: "status-expired" };
+  if (days === 0) return { text: "VENCE HOY",        cls: "status-warning" };
   if (days <= 7)  return { text: `${days}d restantes`, cls: "status-warning" };
-  return           { text: `${days} dias`,        cls: "status-active"  };
-}
-
-function getActiveUserName() {
-  return sessionStorage.getItem("mptUserName") || "USUARIO NO IDENTIFICADO";
+  return           { text: `${days} dias`,            cls: "status-active"  };
 }
 
 function getPeriodLabel() {
@@ -391,7 +375,11 @@ confirmExitBtn.addEventListener("click", () => {
 });
 
 // ================================================================
-// MODAL: ELIMINAR CON CONTRASENA
+// MODAL: ELIMINAR CON VERIFICACION DE ROL
+//
+// Fase demo: verifica rol "admin" en sesion + formato de contrasena.
+// TODO (fase backend): reemplazar por DELETE /api/monthly/:id
+//   con Authorization: Bearer <token>. El backend valida el rol.
 // ================================================================
 
 function openDeleteModal() {
@@ -417,8 +405,18 @@ deleteModal.addEventListener("click", (e) => {
 deleteForm.addEventListener("submit", (e) => {
   e.preventDefault();
 
-  if (developerPasswordInput.value !== DEV_PASSWORD) {
-    deleteMessage.textContent = "Contrasena de usuario desarrollador incorrecta.";
+  const userRole = MPTStorage.getActiveUserRole();
+
+  if (userRole !== "admin") {
+    deleteMessage.textContent = "Solo un administrador puede eliminar registros.";
+    developerPasswordInput.focus();
+    return;
+  }
+
+  // Verificar formato de contrasena (sin exponer el valor exacto en codigo)
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
+  if (!passwordPattern.test(developerPasswordInput.value)) {
+    deleteMessage.textContent = "Contrasena incorrecta o formato invalido.";
     developerPasswordInput.focus();
     return;
   }
@@ -547,7 +545,7 @@ monthlyForm.addEventListener("submit", (e) => {
     startDate,
     expiryDate,
     monthlyRate:  rateRaw,
-    user:         getActiveUserName(),
+    user:         MPTStorage.getActiveUserName(),
     createdAt:    new Date().toISOString(),
   };
 
@@ -594,8 +592,7 @@ mClearFilterBtn.addEventListener("click", () => {
 
 // Cerrar sesion
 logoutButton.addEventListener("click", () => {
-  sessionStorage.removeItem("mptUser");
-  sessionStorage.removeItem("mptUserName");
+  MPTStorage.clearSession();
   window.location.href = "../../index.html";
 });
 

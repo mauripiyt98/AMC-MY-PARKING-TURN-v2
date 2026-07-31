@@ -1,35 +1,170 @@
-# Estructura inicial
+# Estructura del proyecto — My Parking Turn v2
 
-Sistema inicial para MY PARKING TURN.
+Sistema SaaS de gestion de turnos y control de parqueadero.
+Soporta parqueo por horas, dias y suscripcion mensual.
 
-## Carpetas
+---
 
-- `assets/css`: estilos compartidos.
-- `assets/js`: logica del inicio de sesion y pagina principal.
-- `assets/img`: logo central del sistema.
-- `pages`: pantallas internas de la aplicacion.
-- `pages/reportes`: reportes operativos del sistema.
-- `docs`: documentacion del proyecto.
+## Carpetas y archivos
 
-## Flujo actual
+```
+/
+├── index.html                          # Pagina de inicio de sesion (puerta de entrada)
+├── LOGOMPT.png                         # Logo del sistema (raiz, copia en assets/img)
+│
+├── assets/
+│   ├── css/
+│   │   └── styles.css                  # Estilos compartidos de toda la aplicacion
+│   ├── img/
+│   │   └── LOGOMPT.png                 # Logo del sistema
+│   └── js/
+│       ├── storage.js                  # [NUEVO] Capa de abstraccion de datos SaaS
+│       ├── session-guard.js            # [NUEVO] Proteccion de rutas (guard de sesion)
+│       ├── auth.js                     # Logica de inicio de sesion y gestion de sesion
+│       ├── main.js                     # Logica de turnos por horas (pagina principal)
+│       ├── mensualidades.js            # Logica del modulo de mensualidades
+│       └── reportes.js                 # Logica del reporte de historicos
+│
+├── pages/
+│   ├── principal.html                  # Pantalla principal: turnos activos
+│   ├── mensualidades/
+│   │   └── mensualidades.html          # Modulo de suscripciones mensuales
+│   └── reportes/
+│       └── historicos.html             # Reporte de vehiculos cobrados (historico)
+│
+└── docs/
+    └── estructura.md                   # Este archivo
+```
 
-1. `index.html` abre el inicio de sesion.
-2. El usuario debe contener solo numeros, minimo 5 y maximo 10.
-3. La contrasena debe tener minimo 6 caracteres, una mayuscula, una minuscula, un numero y un simbolo.
-4. El usuario inicial registrado es `USUARIO DESARROLLADOR`, con usuario `1110591592`.
-5. Si los datos cumplen las reglas y coinciden con un usuario registrado, se abre `pages/principal.html`.
-6. La pagina principal muestra el logo, campo de placa y fecha/hora automatica de ingreso.
-7. Cada turno generado queda guardado como turno activo con placa, fecha, hora, usuario creador y boton de salida.
-8. Al generar salida, el turno pasa al historial de registros con placa, hora de ingreso, hora de salida y fecha.
-9. El turno exige seleccionar tarifa de moto por `$1500` o carro por `$2500`.
-10. El cobro inicia con la primera hora al ingresar y suma una hora mas apenas empieza cada siguiente hora.
-11. El historial guarda precio por hora y total cobrado.
-12. Los registros activos e historicos solo se pueden eliminar ingresando la contrasena del usuario desarrollador.
-13. Antes de generar salida, el sistema pide confirmacion con opciones `SI` y `NO`, mostrando el total a cobrar.
-14. Una placa no puede tener dos turnos activos al mismo tiempo; despues de generar salida puede registrarse de nuevo.
-15. Cada servicio recibe un consecutivo automatico de `TICKET` que se conserva en turnos activos e historial.
-16. La tabla de turnos activos permite filtrar por placa para ubicar rapido el vehiculo que va a salir.
-17. El boton `REPORTE DE HISTORICOS` abre una pagina independiente con los vehiculos ya cobrados.
-18. El reporte historico se divide por mes y permite filtrar un periodo entre dos fechas.
-19. El resumen del reporte muestra total de tickets y total cobrado para el periodo seleccionado.
-20. Las pantallas internas tienen boton `CERRAR SESION`, que limpia la sesion activa y vuelve al inicio de sesion.
+---
+
+## Arquitectura SaaS (fase actual: frontend demo)
+
+### Capa de datos: `storage.js`
+
+Modulo central que abstrae todo el acceso a datos. Hoy usa `localStorage`
+namespaceado por `tenantId`. Cuando se integre el backend PostgreSQL,
+solo se modifican las funciones internas `_localGet` / `_localSet`
+para llamar a la API REST — el resto del codigo no cambia.
+
+```
+[storage.js]
+  hoy  → localStorage con key: {tenantId}__{nombre_clave}
+  luego → fetch('/api/tenant/:tenantId/:key')
+```
+
+### Aislamiento multi-tenant
+
+Cada clave de almacenamiento incluye el `tenantId` del cliente activo:
+- `tenant_abc123__mptPlateRecords`   — turnos activos del cliente abc123
+- `tenant_abc123__mptPlateHistory`   — historial del cliente abc123
+- `tenant_xyz789__mptPlateRecords`   — turnos activos del cliente xyz789
+
+Esto garantiza aislamiento completo entre distintos clientes SaaS.
+
+### Sesion enriquecida
+
+Despues del login se guarda en `sessionStorage`:
+```json
+{
+  "mptUser":         "1110591592",
+  "mptUserName":     "USUARIO DESARROLLADOR",
+  "mptTenantId":     "tenant_default",
+  "mptRole":         "admin",
+  "mptSessionToken": "local_abc123_xyz"
+}
+```
+
+### Roles definidos
+| Rol        | Permisos                                              |
+|------------|-------------------------------------------------------|
+| `admin`    | Generar turnos, dar salida, eliminar registros        |
+| `operator` | Generar turnos, dar salida (sin eliminar registros)   |
+
+### Proteccion de rutas: `session-guard.js`
+
+Se incluye como **primer script** en cada pagina interna.
+Verifica que existan `mptUser`, `mptTenantId` y `mptSessionToken`
+en `sessionStorage`. Si falta cualquiera, redirige al login
+antes de que se ejecute cualquier otro codigo.
+
+---
+
+## Flujo de usuario
+
+1. `index.html` presenta el formulario de inicio de sesion.
+2. El usuario ingresa su numero de usuario (5-10 digitos) y contrasena.
+3. `auth.js` valida y guarda la sesion con `tenantId`, `role` y token.
+4. Redirige a `pages/principal.html`.
+5. `session-guard.js` verifica la sesion al cargar cada pagina interna.
+6. Si no hay sesion valida → redirige a `index.html`.
+7. `storage.js` provee todos los datos namespaceados por `tenantId`.
+8. El logout limpia todos los valores de sesion y redirige al login.
+
+---
+
+## Reglas de negocio
+
+1. El usuario debe tener solo numeros, minimo 5 y maximo 10.
+2. La contrasena debe tener minimo 6 caracteres, una mayuscula,
+   una minuscula, un numero y un simbolo.
+3. La placa se normaliza a mayusculas sin caracteres especiales (max 8).
+4. Una placa no puede tener dos turnos activos al mismo tiempo.
+5. Tarifa hora por horas: moto $1.500 | carro $2.500.
+6. El cobro inicia con la primera hora al ingresar y suma una
+   hora mas apenas comienza cada siguiente hora.
+7. Cada servicio recibe un consecutivo automatico de TICKET.
+8. Las mensualidades tienen consecutivo MEN-{n} independiente.
+9. Los registros activos e historicos solo pueden eliminarse por
+   usuarios con rol `admin`.
+10. Una suscripcion mensual vence exactamente un mes calendario
+    despues de la fecha de inicio.
+11. Las suscripciones vencidas se mueven automaticamente al
+    historico al cargar la pagina o cada 60 segundos.
+
+---
+
+## Integracion con backend PostgreSQL (proxima fase)
+
+### Puntos de integracion marcados en el codigo
+
+Todos los archivos JS tienen comentarios `// TODO (fase backend):`
+indicando exactamente donde se conectara la API REST.
+
+### Endpoints previstos
+
+| Metodo | Endpoint                  | Descripcion                       |
+|--------|---------------------------|-----------------------------------|
+| POST   | `/api/auth/login`         | Autenticacion, devuelve JWT       |
+| GET    | `/api/auth/verify`        | Validar token activo              |
+| GET    | `/api/records`            | Obtener turnos activos del tenant |
+| POST   | `/api/records`            | Crear turno nuevo                 |
+| DELETE | `/api/records/:id`        | Eliminar turno (rol admin)        |
+| GET    | `/api/history`            | Obtener historial del tenant      |
+| DELETE | `/api/history/:id`        | Eliminar del historial (admin)    |
+| GET    | `/api/monthly`            | Obtener mensualidades activas     |
+| POST   | `/api/monthly`            | Registrar mensualidad nueva       |
+| DELETE | `/api/monthly/:id`        | Cerrar o eliminar mensualidad     |
+
+### Seguridad PostgreSQL (Row Level Security)
+
+Cada tabla tendra la columna `tenant_id`. Se activara RLS para
+que cada query solo acceda a las filas del tenant autenticado:
+
+```sql
+-- Ejemplo de politica RLS
+ALTER TABLE turnos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON turnos
+  USING (tenant_id = current_setting('app.tenant_id'));
+```
+
+---
+
+## Orden de carga de scripts por pagina
+
+| Pagina            | Scripts en orden                                      |
+|-------------------|-------------------------------------------------------|
+| `index.html`      | `storage.js` → `auth.js`                             |
+| `principal.html`  | `session-guard.js` → `storage.js` → `main.js`        |
+| `mensualidades.html` | `session-guard.js` → `storage.js` → `mensualidades.js` |
+| `historicos.html` | `session-guard.js` → `storage.js` → `reportes.js`   |

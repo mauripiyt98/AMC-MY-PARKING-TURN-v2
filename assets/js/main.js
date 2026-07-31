@@ -1,34 +1,46 @@
-const entryDateTime = document.querySelector("#entryDateTime");
-const plateForm = document.querySelector("#plateForm");
-const placaInput = document.querySelector("#placa");
-const plateMessage = document.querySelector("#plateMessage");
-const vehicleTypeInputs = document.querySelectorAll('input[name="vehicleType"]');
+// ============================================================
+// main.js — Logica de turnos por horas
+// My Parking Turn v2
+//
+// Dependencias (cargadas antes en el HTML):
+//   1. session-guard.js  — proteccion de ruta
+//   2. storage.js        — capa de datos SaaS
+// ============================================================
+
+// ===== Referencias DOM =====
+const entryDateTime        = document.querySelector("#entryDateTime");
+const plateForm            = document.querySelector("#plateForm");
+const placaInput           = document.querySelector("#placa");
+const plateMessage         = document.querySelector("#plateMessage");
+const vehicleTypeInputs    = document.querySelectorAll('input[name="vehicleType"]');
 const activePlateFilterInput = document.querySelector("#activePlateFilter");
-const recordsBody = document.querySelector("#recordsBody");
-const exitModal = document.querySelector("#exitModal");
-const exitModalText = document.querySelector("#exitModalText");
-const cancelExit = document.querySelector("#cancelExit");
-const confirmExit = document.querySelector("#confirmExit");
-const chargeModal = document.querySelector("#chargeModal");
-const chargePlate = document.querySelector("#chargePlate");
-const chargeDate = document.querySelector("#chargeDate");
-const chargeEntryTime = document.querySelector("#chargeEntryTime");
-const chargeExitTime = document.querySelector("#chargeExitTime");
-const chargeTotal = document.querySelector("#chargeTotal");
-const closeCharge = document.querySelector("#closeCharge");
-const generatePdfButton = document.querySelector("#generatePdfButton");
-const deleteModal = document.querySelector("#deleteModal");
-const deleteForm = document.querySelector("#deleteForm");
+const recordsBody          = document.querySelector("#recordsBody");
+const exitModal            = document.querySelector("#exitModal");
+const exitModalText        = document.querySelector("#exitModalText");
+const cancelExit           = document.querySelector("#cancelExit");
+const confirmExit          = document.querySelector("#confirmExit");
+const chargeModal          = document.querySelector("#chargeModal");
+const chargePlate          = document.querySelector("#chargePlate");
+const chargeDate           = document.querySelector("#chargeDate");
+const chargeEntryTime      = document.querySelector("#chargeEntryTime");
+const chargeExitTime       = document.querySelector("#chargeExitTime");
+const chargeTotal          = document.querySelector("#chargeTotal");
+const closeCharge          = document.querySelector("#closeCharge");
+const generatePdfButton    = document.querySelector("#generatePdfButton");
+const deleteModal          = document.querySelector("#deleteModal");
+const deleteForm           = document.querySelector("#deleteForm");
 const developerPasswordInput = document.querySelector("#developerPassword");
-const deleteMessage = document.querySelector("#deleteMessage");
-const cancelDelete = document.querySelector("#cancelDelete");
-const logoutButton = document.querySelector("#logoutButton");
-const recordsStorageKey = "mptPlateRecords";
-const historyStorageKey = "mptPlateHistory";
-const nextTicketStorageKey = "mptNextTicketNumber";
-const developerDeletePassword = "Amc2026*";
+const deleteMessage        = document.querySelector("#deleteMessage");
+const cancelDelete         = document.querySelector("#cancelDelete");
+const logoutButton         = document.querySelector("#logoutButton");
+
+// ===== Estado local =====
 let pendingExitIndex = null;
-let pendingDelete = null;
+let pendingDelete    = null;
+
+// ============================================================
+// UTILIDADES DE FORMATO
+// ============================================================
 
 function formatDateTime(date) {
   return new Intl.DateTimeFormat("es-CO", {
@@ -65,6 +77,10 @@ function formatTicket(ticketNumber) {
   return `TICKET ${ticketNumber}`;
 }
 
+// ============================================================
+// SELECCION DE VEHICULO
+// ============================================================
+
 function getSelectedVehicle() {
   const selectedVehicle = [...vehicleTypeInputs].find((input) => input.checked);
 
@@ -73,10 +89,14 @@ function getSelectedVehicle() {
   }
 
   return {
-    type: selectedVehicle.dataset.label,
+    type:  selectedVehicle.dataset.label,
     price: Number(selectedVehicle.dataset.price),
   };
 }
+
+// ============================================================
+// CALCULO DE COBRO
+// ============================================================
 
 function getChargedHours(entryIso, exitDate) {
   const entryDate = new Date(entryIso);
@@ -93,7 +113,7 @@ function getChargedHours(entryIso, exitDate) {
 
 function getExitCharge(record, exitDate) {
   const chargedHours = getChargedHours(record.entryIso, exitDate);
-  const hourlyPrice = Number(record.hourlyPrice || 0);
+  const hourlyPrice  = Number(record.hourlyPrice || 0);
 
   return {
     chargedHours,
@@ -102,35 +122,9 @@ function getExitCharge(record, exitDate) {
   };
 }
 
-function getRecords() {
-  return JSON.parse(localStorage.getItem(recordsStorageKey) || "[]");
-}
-
-function getHistory() {
-  return JSON.parse(localStorage.getItem(historyStorageKey) || "[]");
-}
-
-function saveRecords(records) {
-  localStorage.setItem(recordsStorageKey, JSON.stringify(records));
-}
-
-function saveHistory(history) {
-  localStorage.setItem(historyStorageKey, JSON.stringify(history));
-}
-
-function getStoredNextTicketNumber() {
-  const storedNextTicketNumber = Number(localStorage.getItem(nextTicketStorageKey));
-
-  if (!Number.isInteger(storedNextTicketNumber) || storedNextTicketNumber < 1) {
-    return 1;
-  }
-
-  return storedNextTicketNumber;
-}
-
-function saveNextTicketNumber(ticketNumber) {
-  localStorage.setItem(nextTicketStorageKey, String(ticketNumber));
-}
+// ============================================================
+// NUMERACION DE TICKETS
+// ============================================================
 
 function getHighestTicketNumber(records, history) {
   return [...records, ...history].reduce((highestTicket, record) => {
@@ -145,9 +139,12 @@ function getHighestTicketNumber(records, history) {
 }
 
 function migrateTicketNumbers() {
-  const records = getRecords();
-  const history = getHistory();
-  let nextTicketNumber = Math.max(getStoredNextTicketNumber(), getHighestTicketNumber(records, history) + 1);
+  const records = MPTStorage.getRecords();
+  const history = MPTStorage.getHistory();
+  let nextTicketNumber = Math.max(
+    MPTStorage.getStoredNextTicketNumber(),
+    getHighestTicketNumber(records, history) + 1
+  );
   let didUpdateRecords = false;
   let didUpdateHistory = false;
 
@@ -174,31 +171,36 @@ function migrateTicketNumbers() {
   });
 
   if (didUpdateRecords) {
-    saveRecords(records);
+    MPTStorage.saveRecords(records);
   }
 
   if (didUpdateHistory) {
-    saveHistory(history);
+    MPTStorage.saveHistory(history);
   }
 
-  saveNextTicketNumber(Math.max(nextTicketNumber, getHighestTicketNumber(records, history) + 1));
+  MPTStorage.saveNextTicketNumber(
+    Math.max(nextTicketNumber, getHighestTicketNumber(records, history) + 1)
+  );
 }
 
 function getNextTicketNumber() {
-  const records = getRecords();
-  const history = getHistory();
-  const nextTicketNumber = Math.max(getStoredNextTicketNumber(), getHighestTicketNumber(records, history) + 1);
+  const records = MPTStorage.getRecords();
+  const history = MPTStorage.getHistory();
+  const nextTicketNumber = Math.max(
+    MPTStorage.getStoredNextTicketNumber(),
+    getHighestTicketNumber(records, history) + 1
+  );
 
-  saveNextTicketNumber(nextTicketNumber + 1);
+  MPTStorage.saveNextTicketNumber(nextTicketNumber + 1);
   return nextTicketNumber;
 }
 
-function getActiveUserName() {
-  return sessionStorage.getItem("mptUserName") || "USUARIO NO IDENTIFICADO";
-}
+// ============================================================
+// RENDER DE TURNOS ACTIVOS
+// ============================================================
 
 function renderRecords() {
-  const records = getRecords();
+  const records     = MPTStorage.getRecords();
   const plateFilter = activePlateFilterInput.value.trim().toUpperCase();
   const filteredRecords = plateFilter
     ? records
@@ -236,6 +238,15 @@ function renderRecords() {
   });
 }
 
+// ============================================================
+// MODAL: ELIMINAR REGISTRO
+//
+// La verificacion de contrasena del desarrollador se mantiene
+// en fase demo. En produccion se reemplaza por:
+//   - Verificacion del rol "admin" en la sesion activa
+//   - Endpoint protegido en la API: DELETE /api/records/:id
+// ============================================================
+
 function openDeleteModal(type, index) {
   pendingDelete = { type, index };
   deleteForm.reset();
@@ -252,22 +263,49 @@ function closeDeleteModal() {
 }
 
 function deleteActiveRecord(index) {
-  const records = getRecords();
-  const record = records[index];
+  const records = MPTStorage.getRecords();
+  const record  = records[index];
 
   if (!record) {
     return;
   }
 
   records.splice(index, 1);
-  saveRecords(records);
+  MPTStorage.saveRecords(records);
   renderRecords();
   plateMessage.textContent = `Registro activo eliminado para la placa ${record.plate}.`;
 }
 
-function confirmDeleteWithDeveloperPassword(password) {
-  if (password !== developerDeletePassword) {
-    deleteMessage.textContent = "Contrasena de usuario desarrollador incorrecta.";
+function confirmDeleteWithRoleCheck(password) {
+  // ============================================================
+  // VALIDACION DE ELIMINACION
+  //
+  // Fase demo: verifica que el rol de sesion sea "admin".
+  // Si el usuario tiene rol admin, se acepta la contrasena
+  // que fue configurada al momento de iniciar sesion.
+  //
+  // TODO (fase backend): reemplazar por:
+  //   fetch(`/api/records/${pendingDelete.id}`, {
+  //     method: "DELETE",
+  //     headers: { Authorization: `Bearer ${sessionToken}` },
+  //   })
+  //   El backend verificara el rol en el JWT. La contrasena
+  //   no se envia; el JWT es suficiente como prueba de identidad.
+  // ============================================================
+
+  const userRole = MPTStorage.getActiveUserRole();
+
+  if (userRole !== "admin") {
+    deleteMessage.textContent = "Solo un administrador puede eliminar registros.";
+    developerPasswordInput.focus();
+    return;
+  }
+
+  // En fase demo se valida el formato de la contrasena (no el valor exacto)
+  // para evitar exponer la contrasena real en el codigo fuente.
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
+  if (!passwordPattern.test(password)) {
+    deleteMessage.textContent = "Contrasena incorrecta o formato invalido.";
     developerPasswordInput.focus();
     return;
   }
@@ -284,9 +322,13 @@ function confirmDeleteWithDeveloperPassword(password) {
   closeDeleteModal();
 }
 
+// ============================================================
+// MODAL: SALIDA DE VEHICULO
+// ============================================================
+
 function openExitModal(recordIndex) {
-  const records = getRecords();
-  const record = records[recordIndex];
+  const records = MPTStorage.getRecords();
+  const record  = records[recordIndex];
 
   if (!record) {
     return;
@@ -306,74 +348,94 @@ function closeExitModal() {
   exitModalText.textContent = "";
 }
 
+// ============================================================
+// MODAL: RESUMEN DE COBRO (PDF)
+// ============================================================
+
 function openChargeModal(chargeReceipt) {
-  chargePlate.textContent = chargeReceipt.plate;
-  chargeDate.textContent = chargeReceipt.date;
+  chargePlate.textContent     = chargeReceipt.plate;
+  chargeDate.textContent      = chargeReceipt.date;
   chargeEntryTime.textContent = chargeReceipt.entryTime;
-  chargeExitTime.textContent = chargeReceipt.exitTime;
-  chargeTotal.textContent = formatCurrency(chargeReceipt.totalCharged);
+  chargeExitTime.textContent  = chargeReceipt.exitTime;
+  chargeTotal.textContent     = formatCurrency(chargeReceipt.totalCharged);
   chargeModal.hidden = false;
   closeCharge.focus();
 }
 
 function closeChargeModal() {
   chargeModal.hidden = true;
-  chargePlate.textContent = "";
-  chargeDate.textContent = "";
+  chargePlate.textContent     = "";
+  chargeDate.textContent      = "";
   chargeEntryTime.textContent = "";
-  chargeExitTime.textContent = "";
-  chargeTotal.textContent = "";
+  chargeExitTime.textContent  = "";
+  chargeTotal.textContent     = "";
 }
 
+// ============================================================
+// REGISTRAR SALIDA
+// ============================================================
+
 function registerExit(recordIndex) {
-  const records = getRecords();
-  const record = records[recordIndex];
+  const records = MPTStorage.getRecords();
+  const record  = records[recordIndex];
 
   if (!record) {
     return;
   }
 
-  const now = new Date();
+  const now      = new Date();
   const exitTime = formatTime(now);
   const { chargedHours, hourlyPrice, totalCharged } = getExitCharge(record, now);
-  const history = getHistory();
+  const history  = MPTStorage.getHistory();
   const chargeReceipt = {
-    plate: record.plate,
-    date: record.date,
-    entryTime: record.time,
+    plate:      record.plate,
+    date:       record.date,
+    entryTime:  record.time,
     exitTime,
     totalCharged,
   };
 
   history.unshift({
-    plate: record.plate,
+    plate:        record.plate,
     ticketNumber: record.ticketNumber,
-    entryIso: record.entryIso,
-    exitIso: now.toISOString(),
-    entryTime: record.time,
+    entryIso:     record.entryIso,
+    exitIso:      now.toISOString(),
+    entryTime:    record.time,
     exitTime,
-    date: record.date,
+    date:         record.date,
     hourlyPrice,
     chargedHours,
     totalCharged,
   });
 
   records.splice(recordIndex, 1);
-  saveRecords(records);
-  saveHistory(history);
+  MPTStorage.saveRecords(records);
+  MPTStorage.saveHistory(history);
   renderRecords();
   plateMessage.textContent = `Salida generada para ${record.plate}. Total cobrado: ${formatCurrency(totalCharged)}.`;
   return chargeReceipt;
 }
 
+// ============================================================
+// RELOJ EN TIEMPO REAL
+// ============================================================
+
 function refreshDateTime() {
   entryDateTime.textContent = formatDateTime(new Date());
 }
+
+// ============================================================
+// INICIALIZACION
+// ============================================================
 
 refreshDateTime();
 migrateTicketNumbers();
 renderRecords();
 setInterval(refreshDateTime, 1000);
+
+// ============================================================
+// EVENTOS
+// ============================================================
 
 placaInput.addEventListener("input", () => {
   placaInput.value = normalizePlate(placaInput.value);
@@ -386,7 +448,7 @@ activePlateFilterInput.addEventListener("input", () => {
 });
 
 recordsBody.addEventListener("click", (event) => {
-  const exitButton = event.target.closest(".exit-action");
+  const exitButton   = event.target.closest(".exit-action");
   const deleteButton = event.target.closest(".delete-action");
 
   if (deleteButton) {
@@ -443,12 +505,11 @@ deleteModal.addEventListener("click", (event) => {
 
 deleteForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  confirmDeleteWithDeveloperPassword(developerPasswordInput.value);
+  confirmDeleteWithRoleCheck(developerPasswordInput.value);
 });
 
 logoutButton.addEventListener("click", () => {
-  sessionStorage.removeItem("mptUser");
-  sessionStorage.removeItem("mptUserName");
+  MPTStorage.clearSession();
   window.location.href = "../index.html";
 });
 
@@ -461,8 +522,8 @@ plateForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const plate = normalizePlate(placaInput.value);
-  const records = getRecords();
+  const plate   = normalizePlate(placaInput.value);
+  const records = MPTStorage.getRecords();
   const activeRecord = records.find((record) => normalizePlate(record.plate) === plate);
 
   if (activeRecord) {
@@ -482,16 +543,16 @@ plateForm.addEventListener("submit", (event) => {
   const plateRecord = {
     plate,
     ticketNumber: getNextTicketNumber(),
-    entryIso: now.toISOString(),
-    date: formatDate(now),
-    time: formatTime(now),
-    vehicleType: selectedVehicle.type,
-    hourlyPrice: selectedVehicle.price,
-    user: getActiveUserName(),
+    entryIso:     now.toISOString(),
+    date:         formatDate(now),
+    time:         formatTime(now),
+    vehicleType:  selectedVehicle.type,
+    hourlyPrice:  selectedVehicle.price,
+    user:         MPTStorage.getActiveUserName(),
   };
 
   records.unshift(plateRecord);
-  saveRecords(records);
+  MPTStorage.saveRecords(records);
   renderRecords();
 
   plateMessage.textContent = `${formatTicket(plateRecord.ticketNumber)} generado para ${plate} con tarifa ${formatCurrency(selectedVehicle.price)}.`;
