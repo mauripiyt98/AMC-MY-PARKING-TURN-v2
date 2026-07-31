@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestión de Usuarios | My Parking Turn</title>
+    <meta name="description" content="Módulo de creación y administración de usuarios independientes para My Parking Turn.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/usuarios.css">
+  </head>
+  <body>
+    <main class="screen screen-usuarios" aria-label="Módulo de gestión de usuarios">
+
+      <!-- ===== CABECERA DE MÓDULO ===== -->
+      <header class="usr-header" aria-label="Encabezado del módulo de usuarios">
+        <a class="usr-back-link" href="../principal.html" aria-label="Volver a la página principal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          VOLVER
+        </a>
+        <div class="usr-header-brand">
+          <img class="usr-header-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+          <div>
+            <h1 class="usr-header-title">GESTIÓN DE USUARIOS</h1>
+            <p class="usr-header-subtitle">Módulo Administrador · My Parking Turn</p>
+          </div>
+        </div>
+        <div class="usr-header-badge" aria-label="Rol del usuario actual">
+          <span id="roleLabel">DESARROLLADOR</span>
+        </div>
+      </header>
+
+      <!-- ===== PANEL ESTADÍSTICAS ===== -->
+      <section class="usr-stats-row" aria-label="Resumen de usuarios registrados">
+        <article class="usr-stat-card" id="statTotal">
+          <span class="usr-stat-label">USUARIOS TOTALES</span>
+          <strong class="usr-stat-value" id="statTotalVal">0</strong>
+        </article>
+        <article class="usr-stat-card usr-stat-card--active" id="statActive">
+          <span class="usr-stat-label">USUARIOS ACTIVOS</span>
+          <strong class="usr-stat-value" id="statActiveVal">0</strong>
+        </article>
+        <article class="usr-stat-card usr-stat-card--disabled" id="statDisabled">
+          <span class="usr-stat-label">USUARIOS INACTIVOS</span>
+          <strong class="usr-stat-value" id="statDisabledVal">0</strong>
+        </article>
+      </section>
+
+      <!-- ===== LAYOUT PRINCIPAL ===== -->
+      <div class="usr-main-layout">
+
+        <!-- ─── FORMULARIO CREACIÓN DE USUARIO ─── -->
+        <section class="usr-form-panel" aria-labelledby="formTitle">
+          <h2 id="formTitle">CREAR USUARIO</h2>
+
+          <form id="userForm" novalidate autocomplete="off">
+
+            <!-- ID / Documento -->
+            <div class="usr-field-group">
+              <label class="usr-field" for="userId">
+                <span class="usr-field-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                    <line x1="2" y1="10" x2="22" y2="10"/>
+                  </svg>
+                  ID / DOCUMENTO
+                </span>
+                <input
+                  id="userId"
+                  name="userId"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="15"
+                  placeholder="Cédula, Pasaporte o NIT"
+                  aria-describedby="userIdHint userIdMsg"
+                  required
+                >
+                <span class="usr-field-hint" id="userIdHint">Solo números · 5 a 15 dígitos (Cédula, Pasaporte o NIT)</span>
+                <p class="usr-field-msg" id="userIdMsg" role="alert" aria-live="polite"></p>
+              </label>
+            </div>
+
+            <!-- Correo electrónico -->
+            <div class="usr-field-group">
+              <label class="usr-field" for="userEmail">
+                <span class="usr-field-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  CORREO ELECTRÓNICO
+                </span>
+                <input
+                  id="userEmail"
+                  name="userEmail"
+                  type="email"
+                  placeholder="usuario@correo.com"
+                  aria-describedby="userEmailHint userEmailMsg"
+                  required
+                >
+                <span class="usr-field-hint" id="userEmailHint">Se usará para recuperación de contraseña</span>
+                <p class="usr-field-msg" id="userEmailMsg" role="alert" aria-live="polite"></p>
+              </label>
+            </div>
+
+            <!-- Contraseña -->
+            <div class="usr-field-group">
+              <label class="usr-field" for="userPassword">
+                <span class="usr-field-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  CONTRASEÑA
+                </span>
+                <div class="usr-password-wrap">
+                  <input
+                    id="userPassword"
+                    name="userPassword"
+                    type="password"
+                    placeholder="Ingresa la contraseña"
+                    aria-describedby="pwdReqsList userPasswordMsg"
+                    required
+                  >
+                  <button type="button" class="usr-toggle-pwd" id="togglePwd" aria-label="Mostrar u ocultar contraseña">
+                    <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </div>
+                <p class="usr-field-msg" id="userPasswordMsg" role="alert" aria-live="polite"></p>
+              </label>
+
+              <!-- Indicador de requisitos de contraseña -->
+              <ul class="usr-pwd-reqs" id="pwdReqsList" aria-label="Requisitos de contraseña">
+                <li class="usr-pwd-req" id="req-length" data-rule="length">
+                  <span class="usr-pwd-req-icon" aria-hidden="true">○</span>
+                  Mínimo 8 caracteres
+                </li>
+                <li class="usr-pwd-req" id="req-upper" data-rule="upper">
+                  <span class="usr-pwd-req-icon" aria-hidden="true">○</span>
+                  Al menos una letra mayúscula (A-Z)
+                </li>
+                <li class="usr-pwd-req" id="req-number" data-rule="number">
+                  <span class="usr-pwd-req-icon" aria-hidden="true">○</span>
+                  Al menos un número (0-9)
+                </li>
+                <li class="usr-pwd-req" id="req-special" data-rule="special">
+                  <span class="usr-pwd-req-icon" aria-hidden="true">○</span>
+                  Al menos un carácter especial (* + ) ! @ # $ % &amp; - _ etc.)
+                </li>
+              </ul>
+
+              <!-- Barra de fortaleza -->
+              <div class="usr-pwd-strength" aria-hidden="true">
+                <div class="usr-pwd-strength-bar" id="strengthBar"></div>
+              </div>
+              <span class="usr-pwd-strength-label" id="strengthLabel"></span>
+            </div>
+
+            <!-- Confirmar contraseña -->
+            <div class="usr-field-group">
+              <label class="usr-field" for="userPasswordConfirm">
+                <span class="usr-field-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 12l2 2 4-4"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  CONFIRMAR CONTRASEÑA
+                </span>
+                <div class="usr-password-wrap">
+                  <input
+                    id="userPasswordConfirm"
+                    name="userPasswordConfirm"
+                    type="password"
+                    placeholder="Repite la contraseña"
+                    aria-describedby="userPasswordConfirmMsg"
+                    required
+                  >
+                  <button type="button" class="usr-toggle-pwd" id="togglePwdConfirm" aria-label="Mostrar u ocultar confirmación">
+                    <svg id="eyeIconConfirm" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </div>
+                <p class="usr-field-msg" id="userPasswordConfirmMsg" role="alert" aria-live="polite"></p>
+              </label>
+            </div>
+
+            <!-- Rol del nuevo usuario -->
+            <div class="usr-field-group">
+              <span class="usr-field-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                ROL DE USUARIO
+              </span>
+              <div class="usr-role-selector" role="radiogroup" aria-label="Seleccionar rol del usuario">
+                <label class="usr-role-option">
+                  <input type="radio" name="userRole" value="operator" checked>
+                  <span>
+                    <strong>OPERADOR</strong>
+                    <small>Operación básica del parqueadero</small>
+                  </span>
+                </label>
+                <label class="usr-role-option">
+                  <input type="radio" name="userRole" value="admin">
+                  <span>
+                    <strong>ADMINISTRADOR</strong>
+                    <small>Acceso total al sistema</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Mensaje global del formulario -->
+            <p class="usr-form-message" id="formMsg" role="alert" aria-live="polite"></p>
+
+            <!-- Acciones -->
+            <div class="usr-form-actions">
+              <button type="reset" class="usr-btn-secondary" id="resetFormBtn">LIMPIAR</button>
+              <button type="submit" class="usr-btn-primary" id="submitUserBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <line x1="20" y1="8" x2="20" y2="14"/>
+                  <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+                CREAR USUARIO
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ─── LISTADO DE USUARIOS ─── -->
+        <section class="usr-list-panel" aria-labelledby="listTitle">
+          <header class="usr-list-header">
+            <h2 id="listTitle">USUARIOS REGISTRADOS</h2>
+            <label class="usr-search-field" for="userSearch">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input id="userSearch" type="search" placeholder="Buscar por ID o correo…" autocomplete="off">
+            </label>
+          </header>
+
+          <div class="usr-table-wrap">
+            <table class="usr-table" aria-label="Tabla de usuarios registrados">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">ID / DOCUMENTO</th>
+                  <th scope="col">CORREO</th>
+                  <th scope="col">ROL</th>
+                  <th scope="col">ESTADO</th>
+                  <th scope="col">REGISTRADO</th>
+                  <th scope="col">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr class="usr-empty-row">
+                  <td colspan="7">AÚN NO HAY USUARIOS CREADOS</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div><!-- /usr-main-layout -->
+
+    </main>
+
+    <!-- ===== MODAL CONFIRMACIÓN ELIMINACIÓN ===== -->
+    <div id="deleteUserModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deleteUserModalTitle" hidden>
+      <section class="modal-box usr-delete-modal">
+        <h2 id="deleteUserModalTitle">ELIMINAR USUARIO</h2>
+        <p class="modal-text" id="deleteUserModalText"></p>
+        <p class="usr-modal-warning">Esta acción no se puede deshacer.</p>
+        <div class="modal-actions">
+          <button class="usr-btn-secondary" type="button" id="cancelDeleteUser">CANCELAR</button>
+          <button class="usr-btn-danger" type="button" id="confirmDeleteUser">ELIMINAR</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== MODAL TOGGLE ESTADO ===== -->
+    <div id="toggleStatusModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="toggleStatusModalTitle" hidden>
+      <section class="modal-box">
+        <h2 id="toggleStatusModalTitle">CAMBIAR ESTADO</h2>
+        <p class="modal-text" id="toggleStatusModalText"></p>
+        <div class="modal-actions">
+          <button class="usr-btn-secondary" type="button" id="cancelToggleStatus">CANCELAR</button>
+          <button class="usr-btn-primary" type="button" id="confirmToggleStatus">CONFIRMAR</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== TOAST NOTIFICACIÓN ===== -->
+    <div id="toastNotification" class="usr-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span id="toastMessage"></span>
+    </div>
+
+    <!-- Scripts — session-guard SIEMPRE PRIMERO -->
+    <script src="../../assets/js/session-guard.js"></script>
+    <script src="../../assets/js/storage.js"></script>
+    <script src="../../assets/js/usuarios.js"></script>
+  </body>
+</html>

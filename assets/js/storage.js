@@ -118,6 +118,8 @@ const KEYS = {
   monthlyRecords:  "mptMonthlyRecords",
   monthlyHistory:  "mptMonthlyHistory",
   monthlyTicket:   "mptNextMonthlyTicket",
+  // SECCIÓN 6: Usuarios clientes finales (multicuentas)
+  clientUsers:     "mptClientUsers",
 };
 
 function getRecords() {
@@ -177,6 +179,75 @@ function saveNextMonthlyTicket(n) {
 }
 
 // ============================================================
+// SECCION 6 — BASE DE DATOS DE USUARIOS CLIENTES FINALES
+//
+// Almacena los usuarios creados por el desarrollador/admin.
+// PREPARADO para el sistema multicuenta SaaS:
+//   Cada usuario tendrá un tenantId que lo vinculará con
+//   la cuenta del parqueadero cliente al que pertenece.
+//
+// Estructura de cada registro:
+// {
+//   id:           string  — Número de documento (cédula/NIT/pasaporte)
+//   email:        string  — Correo para recuperación de contraseña
+//   passwordHash: string  — Hash SHA-256 de la contraseña
+//   role:         string  — "admin" | "operator"
+//   status:       string  — "active" | "inactive"
+//   tenantId:     string  — ID del cliente SaaS (MULTICUENTAS)
+//   createdAt:    string  — ISO 8601 timestamp de creación
+//   createdBy:    string  — ID del usuario que lo creó
+// }
+//
+// TODO (fase backend): reemplazar getUsers/saveUsers
+//   por llamadas fetch() al endpoint REST:
+//   GET  /api/users
+//   POST /api/users
+//   PUT  /api/users/:id
+//   DELETE /api/users/:id
+// ============================================================
+
+/**
+ * Retorna todos los usuarios clientes registrados.
+ * @returns {Array} Lista de objetos de usuario
+ */
+function getUsers() {
+  try {
+    const raw = localStorage.getItem(KEYS.clientUsers);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persiste la lista completa de usuarios.
+ * @param {Array} users
+ */
+function saveUsers(users) {
+  localStorage.setItem(KEYS.clientUsers, JSON.stringify(users));
+}
+
+/**
+ * Busca un usuario por su ID de documento.
+ * @param {string} id
+ * @returns {object|null}
+ */
+function findUserById(id) {
+  return getUsers().find((u) => u.id === id) || null;
+}
+
+/**
+ * Busca un usuario por su correo electrónico.
+ * @param {string} email
+ * @returns {object|null}
+ */
+function findUserByEmail(email) {
+  return getUsers().find(
+    (u) => u.email.toLowerCase() === email.toLowerCase()
+  ) || null;
+}
+
+// ============================================================
 // SECCION 5 — EXPORTACION
 // Todos los modulos importan desde window.MPTStorage
 // ============================================================
@@ -204,4 +275,9 @@ window.MPTStorage = {
   saveMonthlyHistory,
   getStoredNextMonthlyTicket,
   saveNextMonthlyTicket,
+  // Usuarios clientes finales (MULTICUENTAS - preparado)
+  getUsers,
+  saveUsers,
+  findUserById,
+  findUserByEmail,
 };
