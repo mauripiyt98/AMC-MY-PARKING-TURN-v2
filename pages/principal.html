@@ -78,6 +78,17 @@
         </label>
         <div class="records-table-wrap">
           <table class="records-table">
+            <colgroup>
+              <col class="records-col-ticket">
+              <col class="records-col-plate">
+              <col class="records-col-date">
+              <col class="records-col-time">
+              <col class="records-col-vehicle">
+              <col class="records-col-price">
+              <col class="records-col-user">
+              <col class="records-col-exit">
+              <col class="records-col-delete">
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">TICKET</th>
@@ -97,6 +108,19 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section class="live-charge-panel" aria-labelledby="liveChargeTitle">
+        <header class="live-charge-header">
+          <div>
+            <p>ACTUALIZACIÓN EN VIVO</p>
+            <h2 id="liveChargeTitle">PREVISUALIZACIÓN DE COBRO</h2>
+          </div>
+          <span class="live-charge-status">● EN TIEMPO REAL</span>
+        </header>
+        <div id="liveChargeList" class="live-charge-list" aria-live="polite">
+          <p class="live-charge-empty">AÚN NO HAY TURNOS ACTIVOS PARA CALCULAR.</p>
         </div>
       </section>
 

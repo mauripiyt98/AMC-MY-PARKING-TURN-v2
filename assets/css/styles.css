@@ -230,9 +230,9 @@ a {
 }
 
 .records-panel {
-  width: min(92vw, 860px);
+  width: min(96vw, 1140px);
   margin-top: 26px;
-  padding: 42px 24px 26px;
+  padding: 42px 18px 26px;
 }
 
 .history-panel[hidden] {
@@ -728,30 +728,178 @@ a {
   margin-top: 18px;
   border: 1px solid var(--color-line);
   border-radius: 8px;
-  overflow-x: auto;
+  overflow: hidden;
   background: var(--color-white);
 }
 
-.records-table {
+.records-panel .records-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 0;
   border-collapse: collapse;
+  table-layout: fixed;
   text-align: center;
 }
 
-.records-table th,
-.records-table td {
+.records-col-ticket { width: 9%; }
+.records-col-plate { width: 9%; }
+.records-col-date { width: 11%; }
+.records-col-time { width: 10%; }
+.records-col-vehicle { width: 9%; }
+.records-col-price { width: 10%; }
+.records-col-user { width: 17%; }
+.records-col-exit { width: 12%; }
+.records-col-delete { width: 13%; }
+
+.records-panel .records-table th,
+.records-panel .records-table td {
   border: 1px solid var(--color-line);
-  padding: 12px 10px;
+  padding: 10px 7px;
   color: var(--color-ink);
-  font-size: 14px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
   font-weight: 800;
 }
 
-.records-table th {
+.records-panel .records-table th {
   color: var(--color-white);
   background: linear-gradient(180deg, var(--color-red), var(--color-red-dark));
+  font-size: 11px;
+}
+
+.records-panel .exit-action,
+.records-panel .delete-action {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 5px;
+  font-size: 11px;
+}
+
+.live-charge-panel {
+  position: relative;
+  width: min(96vw, 1140px);
+  overflow: hidden;
+  margin-top: 22px;
+  border: var(--border-strong);
+  border-radius: 8px;
+  padding: 32px 22px 22px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-panel);
+}
+
+.live-charge-panel::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8px;
+  content: "";
+  background: linear-gradient(90deg, var(--color-red-dark), var(--color-red) 52%, var(--color-warning));
+}
+
+.live-charge-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.live-charge-header p {
+  margin: 0 0 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.live-charge-header h2 {
+  margin: 0;
+  color: var(--color-red-dark);
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.live-charge-status {
+  padding: 6px 10px;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  color: #17713a;
+  background: #dcfce7;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.live-charge-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.live-charge-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--color-line);
+  border-left: 5px solid var(--color-warning);
+  border-radius: 8px;
+  padding: 15px;
+  background: linear-gradient(135deg, #ffffff, var(--color-panel));
+}
+
+.live-charge-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.live-charge-card h3,
+.live-charge-card p {
+  margin: 0;
+}
+
+.live-charge-card h3 {
+  color: var(--color-red-dark);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.live-charge-card header span,
+.live-charge-card p {
+  color: var(--color-muted);
   font-size: 12px;
+  font-weight: 800;
+}
+
+.live-charge-total {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #bfc7d0;
+}
+
+.live-charge-total span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.live-charge-total strong {
+  color: var(--color-red-dark);
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.live-charge-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed #bfc7d0;
+  border-radius: 8px;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .records-table tbody tr:nth-child(even) {
@@ -1310,10 +1458,21 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .records-table th,
-  .records-table td {
-    padding: 10px 8px;
-    font-size: 14px;
+  .records-panel .records-table th,
+  .records-panel .records-table td {
+    padding: 7px 3px;
+    font-size: 9px;
+  }
+
+  .records-panel .records-table th {
+    font-size: 8px;
+  }
+
+  .records-panel .exit-action,
+  .records-panel .delete-action {
+    min-height: 28px;
+    padding: 4px 2px;
+    font-size: 8px;
   }
 
   .price-selector span {

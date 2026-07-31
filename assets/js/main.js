@@ -35,6 +35,7 @@ const cancelDelete         = document.querySelector("#cancelDelete");
 const logoutButton         = document.querySelector("#logoutButton");
 const manageUsersLink      = document.querySelector("#btnGestionUsuarios");
 const welcomeMessage       = document.querySelector("#welcomeMessage");
+const liveChargeList       = document.querySelector("#liveChargeList");
 
 // ===== Estado local =====
 let pendingExitIndex = null;
@@ -168,6 +169,38 @@ function getExitCharge(record, exitDate) {
   };
 }
 
+function escapeHtml(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function renderLiveCharges() {
+  if (!liveChargeList) return;
+  const records = MPTStorage.getRecords();
+  if (!records.length) {
+    liveChargeList.innerHTML = '<p class="live-charge-empty">AÚN NO HAY TURNOS ACTIVOS PARA CALCULAR.</p>';
+    return;
+  }
+
+  const now = new Date();
+  liveChargeList.innerHTML = records.map((record) => {
+    const { chargedHours, totalCharged } = getExitCharge(record, now);
+    const hoursLabel = `${chargedHours} ${chargedHours === 1 ? 'HORA' : 'HORAS'}`;
+    return `
+      <article class="live-charge-card">
+        <header>
+          <h3>${escapeHtml(record.plate)}</h3>
+          <span>${escapeHtml(record.vehicleType || 'VEHÍCULO')}</span>
+        </header>
+        <p>Tiempo transcurrido: ${hoursLabel}</p>
+        <div class="live-charge-total">
+          <span>VALOR ACTUAL A COBRAR</span>
+          <strong>${formatCurrency(totalCharged)}</strong>
+        </div>
+      </article>`;
+  }).join('');
+}
+
 // ============================================================
 // NUMERACION DE TICKETS
 // ============================================================
@@ -255,6 +288,7 @@ function renderRecords() {
     : records.map((record, index) => ({ record, index }));
 
   recordsBody.innerHTML = "";
+  renderLiveCharges();
 
   if (records.length === 0) {
     recordsBody.innerHTML = '<tr class="empty-record"><td colspan="9">AUN NO HAY TURNOS REGISTRADOS</td></tr>';
@@ -468,6 +502,7 @@ function registerExit(recordIndex) {
 
 function refreshDateTime() {
   entryDateTime.textContent = formatDateTime(new Date());
+  renderLiveCharges();
 }
 
 // ============================================================
