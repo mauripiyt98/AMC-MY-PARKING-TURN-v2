@@ -132,6 +132,9 @@ antes de que se ejecute cualquier otro codigo.
 
 ## Integración con backend PostgreSQL
 
+La guía actual de operación, protección y recuperación de cuentas está en
+[`postgresql.md`](postgresql.md).
+
 ### Puesta en marcha local
 
 1. Instala Node.js 18 o superior y PostgreSQL 15 o superior.

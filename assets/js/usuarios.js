@@ -65,11 +65,6 @@ async function request(path, options = {}) {
   return data;
 }
 
-function localUsers() {
-  const all = MPTStorage.getUsers();
-  const tenant = MPTStorage.getActiveTenantId();
-  return all.filter((user) => (user.tenantId || 'tenant_default') === tenant);
-}
 function mapApiUser(user) {
   return {
     id: user.id,
@@ -82,25 +77,6 @@ function mapApiUser(user) {
     local: false,
   };
 }
-function mapLocalUser(user) {
-  return {
-    id: user.id,
-    documento: user.id,
-    nombre: user.name || `Usuario ${user.id}`,
-    email: user.email || '',
-    rol: user.role || 'operator',
-    activo: user.status !== 'inactive',
-    creado_en: user.createdAt,
-    local: true,
-  };
-}
-
-async function hashLocalPassword(value) {
-  const data = new TextEncoder().encode(value + '_mpt_salt_parking_v2');
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((item) => item.toString(16).padStart(2, '0')).join('');
-}
-
 function showFormMessage(message, type = 'error') {
   formMessage.textContent = message;
   formMessage.className = `usr-form-message msg-${type}`;
@@ -151,9 +127,12 @@ function render() {
 
 async function loadUsers() {
   try {
-    users = isBackendSession()
-      ? (await request('/usuarios')).usuarios.map(mapApiUser)
-      : localUsers().map(mapLocalUser);
+    if (!isBackendSession()) {
+      users = [];
+      showToast('La gestión de usuarios requiere conexión con el backend y PostgreSQL.', 'error');
+    } else {
+      users = (await request('/usuarios')).usuarios.map(mapApiUser);
+    }
     render();
   } catch (error) {
     showToast(error.message, 'error');
@@ -224,12 +203,7 @@ form.addEventListener('submit', async (event) => {
         showToast('Usuario creado para este parqueadero.', 'success');
       }
     } else {
-      const all = MPTStorage.getUsers();
-      const tenantId = isSuperadmin() ? fields.parkingCode.value.trim().toUpperCase() : MPTStorage.getActiveTenantId();
-      if (all.some((user) => user.id === fields.document.value.trim())) throw new Error('Ese documento ya está registrado en el sistema.');
-      all.push({ id: fields.document.value.trim(), name: fields.name.value.trim(), email: fields.email.value.trim().toLowerCase(), passwordHash: await hashLocalPassword(fields.password.value), role: isSuperadmin() ? 'admin' : selectedRole, status: 'active', tenantId, createdAt: new Date().toISOString() });
-      MPTStorage.saveUsers(all);
-      showToast(isSuperadmin() ? `Cuenta local ${tenantId} creada.` : 'Usuario local creado.', 'success');
+      throw new Error('No hay conexión al backend. Los usuarios solo se crean en PostgreSQL.');
     }
     form.reset();
     if (isSuperadmin()) document.querySelector('input[name="userRole"][value="admin"]').checked = true;
@@ -266,8 +240,7 @@ async function applyStatus(active) {
       if (active) await request(`/usuarios/${user.id}`, { method: 'PATCH', body: JSON.stringify({ activo: true }) });
       else await request(`/usuarios/${user.id}`, { method: 'DELETE' });
     } else {
-      const all = MPTStorage.getUsers().map((item) => item.id === user.id && item.tenantId === MPTStorage.getActiveTenantId() ? { ...item, status: active ? 'active' : 'inactive' } : item);
-      MPTStorage.saveUsers(all);
+      throw new Error('No hay conexión al backend. El estado del usuario no se modificó.');
     }
     showToast(`Usuario ${active ? 'activado' : 'desactivado'}.`, active ? 'success' : 'error');
     await loadUsers();

@@ -40,16 +40,16 @@ const MPT_KEYS = {
 };
 
 // ── Credenciales por defecto del DESARROLLADOR (fallback local) ─
-// HARDCODEADAS — garantizan acceso desde CUALQUIER navegador cuando el backend no está disponible.
-// En producción con backend activo: estas se usan solo como emergencia offline.
+// El hash local solo permite recuperar el acceso en un entorno sin backend.
+// En producción, el inicio de sesión se valida en PostgreSQL con bcrypt.
 const DEFAULT_DEV = {
   userId:             '1110591592',
   name:               'USUARIO DESARROLLADOR',
-  role:               'admin',
-  email:              'dev@mpt.com',
+  role:               'superadmin',
+  email:              'andresitomao@gmail.com',
   codigoParqueadero:  'PARK001',    // Código de parqueadero por defecto (fallback local)
-  // Hash SHA-256 de Dev@12345 con el salt local. Solo se usa sin backend.
-  passwordHash:       '501d412e5dc08822a4629bfe4a3deefc4d60829d8c7e21f3eebd22490b67f74c',
+  // Hash SHA-256 de la clave de recuperación con el salt local.
+  passwordHash:       'b51bf9bb4b46ff035197791dbc7de54eff9539df1661324f66081d4767e6800d',
 };
 
 // ── URL del backend ────────────────────────────────────────────
@@ -71,17 +71,15 @@ const PWD_PATTERN  = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 (function initStorage() {
   try {
     const current = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
-    // Compatibilidad: una versión anterior impuso temporalmente Dev@12345.
-    // Se elimina ese valor para conservar la clave local habitual del usuario.
-    if (!current || current.passwordHash === DEFAULT_DEV.passwordHash) {
+    // Reemplazar configuraciones locales anteriores por la cuenta principal.
+    if (!current || current.userId === DEFAULT_DEV.userId) {
       localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
-        ...current,
         userId:            DEFAULT_DEV.userId,
         name:              DEFAULT_DEV.name,
         role:              DEFAULT_DEV.role,
         email:             DEFAULT_DEV.email,
         codigoParqueadero: DEFAULT_DEV.codigoParqueadero,
-        passwordHash:       null,
+        passwordHash:       DEFAULT_DEV.passwordHash,
       }));
     }
   } catch { /* sin espacio en localStorage */ }
@@ -191,23 +189,15 @@ async function validarLocal(userId, password) {
       const stored = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
 
       if (stored) {
-        const isMatch = !stored.passwordHash
-          ? PWD_PATTERN.test(password)
-          : stored.passwordHash === passwordHash;
+        const isMatch = stored.passwordHash === passwordHash;
 
         if (isMatch) {
           // Tras el primer ingreso compatible, queda vinculada la misma clave
           // en este navegador para los próximos inicios de sesión.
-          if (!stored.passwordHash) {
-            localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
-              ...stored,
-              passwordHash,
-            }));
-          }
           return {
             userId:           stored.userId || DEFAULT_DEV.userId,
             name:             stored.name   || DEFAULT_DEV.name,
-            role:             'admin',
+            role:             'superadmin',
             tenantId:         'tenant_default',
             codigoParqueadero: stored.codigoParqueadero || DEFAULT_DEV.codigoParqueadero,
             tipo:             'desarrollador',

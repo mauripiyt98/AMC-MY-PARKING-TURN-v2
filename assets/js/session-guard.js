@@ -83,8 +83,8 @@
         localStorage.setItem(DEV_USER_KEY, JSON.stringify({
           userId:       '1110591592',
           name:         'USUARIO DESARROLLADOR',
-          role:         'admin',
-          email:        'dev@mpt.com',
+          role:         'superadmin',
+          email:        'andresitomao@gmail.com',
           passwordHash: null,
           tenantId:     'tenant_default',
         }));
