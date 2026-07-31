@@ -314,6 +314,11 @@ a {
   letter-spacing: 0;
 }
 
+.plate-field span {
+  justify-self: center;
+  text-align: center;
+}
+
 .primary-action,
 .secondary-action,
 .exit-action,
@@ -967,6 +972,11 @@ a {
   transform: translateY(-1px);
 }
 
+/* Configuración de precios: tercera tarjeta flotante bajo Mensualidades. */
+.price-action {
+  top: calc(50% + 260px);
+}
+
 /* ================================================================
    MENSUALIDADES — LAYOUT SUPERIOR (REGISTRO + CALENDARIO)
    ================================================================ */
@@ -1351,6 +1361,10 @@ a {
     width: clamp(110px, 11vw, 150px);
     padding: 28px 10px 20px;
     gap: 12px;
+  }
+
+  .price-action {
+    top: calc(50% + 205px);
   }
 
   .side-module-icon {

@@ -209,6 +209,7 @@ const KEYS = {
   monthlyHistory:  "mptMonthlyHistory",
   monthlyTicket:   "mptNextMonthlyTicket",
   parkingProfile:  "mptParkingProfile",
+  parkingPrices:   "mptParkingPrices",
   // SECCIÓN 6: Usuarios clientes finales (multicuentas)
   clientUsers:     "mptClientUsers",
   tenants:         "mptTenants",
@@ -282,6 +283,34 @@ function getParkingProfile() {
 /** Guarda el perfil comercial aislado para el parqueadero de la sesión activa. */
 function saveParkingProfile(profile) {
   _localSet(KEYS.parkingProfile, profile);
+}
+
+// ============================================================
+// SECCION 6 — TARIFAS DEL PARQUEADERO
+// ============================================================
+
+const DEFAULT_PARKING_PRICES = Object.freeze({ moto: 1500, carro: 2500 });
+
+function normalizePrice(value, fallback) {
+  const price = Number(value);
+  return Number.isInteger(price) && price > 0 ? price : fallback;
+}
+
+/** Retorna las tarifas por hora del parqueadero de la sesión activa. */
+function getParkingPrices() {
+  const saved = _localGet(KEYS.parkingPrices) || {};
+  return {
+    moto: normalizePrice(saved.moto, DEFAULT_PARKING_PRICES.moto),
+    carro: normalizePrice(saved.carro, DEFAULT_PARKING_PRICES.carro),
+  };
+}
+
+/** Guarda las tarifas por hora separadas para el parqueadero activo. */
+function saveParkingPrices(prices) {
+  _localSet(KEYS.parkingPrices, {
+    moto: normalizePrice(prices?.moto, DEFAULT_PARKING_PRICES.moto),
+    carro: normalizePrice(prices?.carro, DEFAULT_PARKING_PRICES.carro),
+  });
 }
 
 // ============================================================
@@ -412,6 +441,9 @@ window.MPTStorage = {
   // Perfil del parqueadero
   getParkingProfile,
   saveParkingProfile,
+  // Tarifas por hora
+  getParkingPrices,
+  saveParkingPrices,
   // Usuarios clientes finales (MULTICUENTAS - preparado)
   getUsers,
   saveUsers,

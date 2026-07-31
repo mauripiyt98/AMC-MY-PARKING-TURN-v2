@@ -88,6 +88,41 @@ function formatTicket(ticketNumber) {
   return `TICKET ${ticketNumber}`;
 }
 
+function formatSelectorPrice(value) {
+  return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+}
+
+function renderConfiguredPrices() {
+  const prices = MPTStorage.getParkingPrices();
+  vehicleTypeInputs.forEach((input) => {
+    const price = prices[input.value];
+    if (!Number.isFinite(price)) return;
+    input.dataset.price = String(price);
+    const label = input.nextElementSibling;
+    if (label) label.textContent = `PRECIO ${input.dataset.label} $${formatSelectorPrice(price)}`;
+  });
+}
+
+async function syncConfiguredPricesFromServer() {
+  if (!MPTStorage.hasJwtSession()) return;
+
+  try {
+    const tenantId = MPTStorage.getActiveTenantId();
+    const token = MPTStorage.getSessionToken();
+    const response = await fetch(`http://localhost:3000/api/parqueaderos/${tenantId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    const prices = data.parqueadero;
+    if (!response.ok || !data.success || !prices) return;
+    if (!Number.isInteger(prices.tarifa_moto_hora) || !Number.isInteger(prices.tarifa_carro_hora)) return;
+    MPTStorage.saveParkingPrices({ moto: prices.tarifa_moto_hora, carro: prices.tarifa_carro_hora });
+    renderConfiguredPrices();
+  } catch {
+    // El modo local sigue operativo si el servidor no está disponible.
+  }
+}
+
 // ============================================================
 // SELECCION DE VEHICULO
 // ============================================================
@@ -440,6 +475,8 @@ function refreshDateTime() {
 // ============================================================
 
 refreshDateTime();
+renderConfiguredPrices();
+syncConfiguredPricesFromServer();
 migrateTicketNumbers();
 renderRecords();
 setInterval(refreshDateTime, 1000);

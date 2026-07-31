@@ -141,7 +141,8 @@ router.get('/:id',
 
       const { rows } = await query(
         `SELECT id, codigo, nombre, nit, direccion, ciudad, departamento,
-                telefono, email, logo_url, activo, plan, creado_en, actualizado_en
+                telefono, email, logo_url, tarifa_moto_hora, tarifa_carro_hora,
+                activo, plan, creado_en, actualizado_en
          FROM parqueaderos WHERE id = $1`,
         [req.params.id]
       );
@@ -167,7 +168,7 @@ router.patch('/:id',
         throw new NotFoundError('Parqueadero');
       }
 
-      const allowed = ['nombre', 'nit', 'direccion', 'ciudad', 'departamento', 'telefono', 'email', 'logo_url'];
+      const allowed = ['nombre', 'nit', 'direccion', 'ciudad', 'departamento', 'telefono', 'email', 'logo_url', 'tarifa_moto_hora', 'tarifa_carro_hora'];
       const fields  = [];
       const values  = [];
       let idx = 1;
@@ -187,7 +188,7 @@ router.patch('/:id',
       values.push(req.params.id);
       const { rows } = await query(
         `UPDATE parqueaderos SET ${fields.join(', ')} WHERE id = $${idx}
-         RETURNING id, codigo, nombre, nit, ciudad, activo, plan, actualizado_en`,
+         RETURNING id, codigo, nombre, nit, ciudad, tarifa_moto_hora, tarifa_carro_hora, activo, plan, actualizado_en`,
         values
       );
       if (!rows[0]) throw new NotFoundError('Parqueadero');

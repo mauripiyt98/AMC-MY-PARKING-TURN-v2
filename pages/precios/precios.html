@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cambio de precios | My Parking Turn</title>
+    <meta name="description" content="Configuración de tarifas por hora del parqueadero.">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/precios.css">
+  </head>
+  <body>
+    <main class="screen screen-prices">
+      <header class="prices-header">
+        <a class="prices-back-link" href="../principal.html" aria-label="Volver a la generación de turnos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          VOLVER A TURNOS
+        </a>
+        <img class="prices-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <div>
+          <p class="prices-eyebrow">CONFIGURACIÓN DEL PARQUEADERO</p>
+          <h1>CAMBIO DE PRECIOS</h1>
+          <p>Define el valor por hora que se aplicará a los próximos turnos.</p>
+        </div>
+      </header>
+
+      <section class="prices-panel" aria-labelledby="pricesTitle">
+        <div class="prices-panel-heading">
+          <span aria-hidden="true">$</span>
+          <div>
+            <h2 id="pricesTitle">TARIFAS POR HORA</h2>
+            <p>Las tarifas se guardan de forma independiente para este parqueadero.</p>
+          </div>
+        </div>
+
+        <form id="pricesForm" novalidate>
+          <div class="prices-grid">
+            <article class="price-config-card price-config-card--primary">
+              <span class="price-config-number">01 · PRINCIPAL</span>
+              <h3>PRECIO MOTO</h3>
+              <p>Valor que se cobrará por cada hora de motos.</p>
+              <label for="motoHourlyPrice">VALOR POR HORA (COP)</label>
+              <div class="price-input-wrap">
+                <span>$</span>
+                <input id="motoHourlyPrice" name="moto" type="number" inputmode="numeric" min="1" max="9999999" step="100" required>
+              </div>
+            </article>
+
+            <article class="price-config-card">
+              <span class="price-config-number">02 · PRINCIPAL</span>
+              <h3>PRECIO CARRO</h3>
+              <p>Valor que se cobrará por cada hora de carros.</p>
+              <label for="carHourlyPrice">VALOR POR HORA (COP)</label>
+              <div class="price-input-wrap">
+                <span>$</span>
+                <input id="carHourlyPrice" name="carro" type="number" inputmode="numeric" min="1" max="9999999" step="100" required>
+              </div>
+            </article>
+
+            <article class="price-config-card price-config-card--future" aria-label="Sección disponible para desarrollo futuro">
+              <span class="price-config-number">03 · PRÓXIMAMENTE</span>
+              <div class="future-price-icon" aria-hidden="true">+</div>
+              <h3>NUEVO SERVICIO</h3>
+              <p>Espacio reservado para configurar futuros servicios y sus tarifas.</p>
+            </article>
+          </div>
+
+          <p id="pricesMessage" class="prices-message" role="status" aria-live="polite"></p>
+          <button class="primary-action prices-save-button" type="submit">GUARDAR CAMBIOS</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="../../assets/js/session-guard.js"></script>
+    <script src="../../assets/js/storage.js"></script>
+    <script src="../../assets/js/precios.js"></script>
+  </body>
+</html>
