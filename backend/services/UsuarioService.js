@@ -1,7 +1,7 @@
 'use strict';
 
 const jwt        = require('jsonwebtoken');
-const { query }  = require('../db/pool');
+const { withAuthContext }  = require('../db/pool');
 const Usuario    = require('../models/Usuario');
 const Parqueadero = require('../models/Parqueadero');
 const { comparePassword, generateJti } = require('../utils/crypto');
@@ -31,8 +31,9 @@ class UsuarioService {
    * @param {object} meta              - { ip, userAgent } para auditoría
    */
   static async login(codigoParqueadero, documento, password, meta = {}) {
+    return withAuthContext(async (client) => {
     // 1. Buscar parqueadero por código
-    const { rows: parkRows } = await query(
+    const { rows: parkRows } = await client.query(
       `SELECT id, nombre, codigo, activo FROM parqueaderos WHERE codigo = $1`,
       [codigoParqueadero.toUpperCase().trim()]
     );
@@ -43,7 +44,7 @@ class UsuarioService {
     if (!parqueadero.activo) throw new UnauthorizedError('El parqueadero está desactivado. Contacte al administrador.');
 
     // 2. Buscar usuario en ese parqueadero
-    const { rows: userRows } = await query(
+    const { rows: userRows } = await client.query(
       `SELECT id, parqueadero_id, nombre, documento, password_hash, rol, activo
        FROM usuarios WHERE parqueadero_id = $1 AND documento = $2`,
       [parqueadero.id, documento]
@@ -58,9 +59,7 @@ class UsuarioService {
     if (!ok) throw new UnauthorizedError('Código de parqueadero, documento o contraseña incorrectos');
 
     // 4. Generar JWT con parqueadero_id y jti para revocación
-    const jti     = generateJti();
-    const expMs   = 8 * 60 * 60 * 1000; // 8 horas en ms
-    const expDate = new Date(Date.now() + expMs);
+    const jti = generateJti();
 
     const token = jwt.sign(
       {
@@ -73,16 +72,18 @@ class UsuarioService {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES }
     );
+    const { exp } = jwt.decode(token);
+    const expDate = new Date(exp * 1000);
 
     // 5. Registrar sesión en DB para permitir revocación
-    await query(
+    await client.query(
       `INSERT INTO sesiones_jwt (usuario_id, parqueadero_id, jti, expira_en, ip_origen, user_agent)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [usuario.id, parqueadero.id, jti, expDate, meta.ip || null, meta.userAgent || null]
     );
 
     // 6. Actualizar último acceso
-    await query(
+    await client.query(
       `UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = $1`,
       [usuario.id]
     );
@@ -100,27 +101,28 @@ class UsuarioService {
         codigo_parqueadero: parqueadero.codigo,
       },
     };
+    });
   }
 
   /**
    * Logout: revocar el token del usuario actual.
    */
   static async logout(jti) {
-    await query(
+    await withAuthContext((client) => client.query(
       `UPDATE sesiones_jwt SET revocado = TRUE WHERE jti = $1`,
       [jti]
-    );
+    ));
   }
 
   /**
    * Verificar si un token específico está activo.
    */
   static async verifyToken(jti) {
-    const { rows } = await query(
+    const { rows } = await withAuthContext((client) => client.query(
       `SELECT id FROM sesiones_jwt
        WHERE jti = $1 AND revocado = FALSE AND expira_en > NOW()`,
       [jti]
-    );
+    ));
     return rows.length > 0;
   }
 }

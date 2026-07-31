@@ -1,7 +1,7 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-const { query } = require('../db/pool');
+const { withAuthContext } = require('../db/pool');
 const { UnauthorizedError } = require('../utils/errors');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'CAMBIAR_EN_PRODUCCION';
@@ -41,11 +41,11 @@ async function authMiddleware(req, _res, next) {
     }
 
     // Verificar que el token no haya sido revocado
-    const { rows } = await query(
+    const { rows } = await withAuthContext((client) => client.query(
       `SELECT id FROM sesiones_jwt
        WHERE jti = $1 AND revocado = FALSE AND expira_en > NOW()`,
       [payload.jti]
-    );
+    ));
     if (!rows.length) {
       throw new UnauthorizedError('Sesión inválida o revocada. Inicie sesión nuevamente.');
     }

@@ -33,6 +33,7 @@ const developerPasswordInput = document.querySelector("#developerPassword");
 const deleteMessage        = document.querySelector("#deleteMessage");
 const cancelDelete         = document.querySelector("#cancelDelete");
 const logoutButton         = document.querySelector("#logoutButton");
+const manageUsersLink      = document.querySelector("#btnGestionUsuarios");
 
 // ===== Estado local =====
 let pendingExitIndex = null;
@@ -509,9 +510,23 @@ deleteForm.addEventListener("submit", (event) => {
 });
 
 logoutButton.addEventListener("click", () => {
+  // La revocación remota es complementaria: aun si el backend no está
+  // disponible, la sesión local se limpia inmediatamente.
+  const jwt = MPTStorage.getSessionToken && MPTStorage.getSessionToken();
+  if (jwt && jwt.split('.').length === 3) {
+    fetch('http://localhost:3000/api/auth/logout', {
+      method: 'POST', headers: { Authorization: `Bearer ${jwt}` },
+    }).catch(() => {});
+  }
   MPTStorage.clearSession();
   window.location.href = "../index.html";
 });
+
+// La pantalla de administración no se ofrece a operadores. El backend
+// mantiene la misma regla y es la autoridad final de autorización.
+if (manageUsersLink && !['admin', 'superadmin'].includes(MPTStorage.getActiveUserRole())) {
+  manageUsersLink.hidden = true;
+}
 
 plateForm.addEventListener("submit", (event) => {
   event.preventDefault();

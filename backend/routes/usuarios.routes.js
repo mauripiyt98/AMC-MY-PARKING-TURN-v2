@@ -43,6 +43,7 @@ router.post('/',
   validateBody({
     nombre  : [required('Nombre requerido'), minLen(2, 'Nombre muy corto'), maxLen(150, 'Nombre muy largo')],
     documento: [required('Documento requerido'), minLen(5, 'Documento mínimo 5 dígitos'), maxLen(20, 'Documento muy largo')],
+    email    : [isEmail('Correo electrónico inválido')],
     password : [required('Contraseña requerida'), securePassword()],
   }),
   async (req, res, next) => {
@@ -55,9 +56,7 @@ router.post('/',
       }
 
       // Validar rol permitido
-      const rolesPermitidos = req.user.rol === 'SUPERADMIN'
-        ? ['SUPERADMIN', 'ADMIN', 'OPERADOR']
-        : ['ADMIN', 'OPERADOR'];
+      const rolesPermitidos = ['ADMIN', 'OPERADOR'];
       if (!rolesPermitidos.includes(rol.toUpperCase())) {
         throw new ValidationError(`Rol inválido. Permitidos: ${rolesPermitidos.join(', ')}`);
       }
@@ -97,9 +96,7 @@ router.patch('/:id',
 
       // Cambio de rol — validar permisos
       if (rol !== undefined) {
-        const rolesPermitidos = req.user.rol === 'SUPERADMIN'
-          ? ['SUPERADMIN', 'ADMIN', 'OPERADOR']
-          : ['ADMIN', 'OPERADOR'];
+        const rolesPermitidos = ['ADMIN', 'OPERADOR'];
         if (!rolesPermitidos.includes(rol.toUpperCase())) {
           throw new ValidationError(`Rol inválido. Permitidos: ${rolesPermitidos.join(', ')}`);
         }
@@ -117,6 +114,12 @@ router.patch('/:id',
 
       const usuario = await Usuario.update(req.dbClient, req.parqueaderoId, req.params.id, updates);
       if (!usuario) throw new NotFoundError('Usuario');
+      if (updates.activo === false) {
+        await req.dbClient.query(
+          'UPDATE sesiones_jwt SET revocado = TRUE WHERE usuario_id = $1 AND parqueadero_id = $2',
+          [usuario.id, req.parqueaderoId]
+        );
+      }
       res.json({ success: true, usuario });
     } catch (err) {
       next(err);
@@ -133,6 +136,10 @@ router.delete('/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next)
     }
     const usuario = await Usuario.deactivate(req.dbClient, req.parqueaderoId, req.params.id);
     if (!usuario) throw new NotFoundError('Usuario');
+    await req.dbClient.query(
+      'UPDATE sesiones_jwt SET revocado = TRUE WHERE usuario_id = $1 AND parqueadero_id = $2',
+      [usuario.id, req.parqueaderoId]
+    );
     res.json({ success: true, message: 'Usuario desactivado correctamente' });
   } catch (err) {
     next(err);

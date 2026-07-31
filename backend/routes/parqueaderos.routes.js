@@ -6,9 +6,9 @@ const Usuario             = require('../models/Usuario');
 const { hashPassword }    = require('../utils/crypto');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { tenantMiddleware } = require('../middleware/tenant');
-const { query }           = require('../db/pool');
+const { query, pool }     = require('../db/pool');
 const {
-  validateBody, required, minLen, maxLen, isEmail,
+  validateBody, required, minLen, maxLen, isEmail, securePassword,
 } = require('../middleware/validate');
 const {
   NotFoundError, ConflictError, ValidationError,
@@ -43,7 +43,8 @@ router.post('/',
     nombre         : [required('Nombre del parqueadero requerido'), minLen(3, 'Nombre muy corto')],
     admin_documento: [required('Documento del administrador requerido'), minLen(5, 'Mínimo 5 dígitos')],
     admin_nombre   : [required('Nombre del administrador requerido'), minLen(2, 'Nombre muy corto')],
-    admin_password : [required('Contraseña del administrador requerida')],
+    admin_email    : [isEmail('Correo electrónico del administrador inválido')],
+    admin_password : [required('Contraseña del administrador requerida'), securePassword()],
   }),
   async (req, res, next) => {
     try {
@@ -52,6 +53,10 @@ router.post('/',
         telefono, email, plan,
         admin_documento, admin_nombre, admin_email, admin_password,
       } = req.body;
+
+      if (!/^[A-Z0-9_-]{3,30}$/.test(codigo.toUpperCase().trim())) {
+        throw new ValidationError('El código del parqueadero solo puede usar letras, números, guion y guion bajo');
+      }
 
       // Verificar código único
       const { rows: existing } = await query(
@@ -68,9 +73,10 @@ router.post('/',
       }
 
       // Crear parqueadero + usuario ADMIN en una transacción
-      const client = await (require('../db/pool').pool).connect();
+      const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        await client.query("SELECT set_config('app.request_context', 'system', true)");
 
         // 1. Crear parqueadero (tenant)
         const { rows: parkRows } = await client.query(

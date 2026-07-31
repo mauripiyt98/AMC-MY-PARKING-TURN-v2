@@ -55,7 +55,7 @@ async function tenantMiddleware(req, res, next) {
     // Cualquier query posterior en esta conexión verá app.parqueadero_id seteado.
     // Las políticas RLS de PostgreSQL llaman a current_parqueadero_id() que lee
     // este valor y filtra automáticamente todas las queries.
-    await client.query(`SET LOCAL app.parqueadero_id = $1`, [parqueaderoId]);
+    await client.query("SELECT set_config('app.parqueadero_id', $1, true)", [parqueaderoId]);
 
     // Adjuntar el cliente y parqueadero_id al request para los controladores
     req.dbClient      = client;

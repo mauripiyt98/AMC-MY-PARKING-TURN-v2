@@ -38,7 +38,13 @@ Soporta parqueo por horas, dias y suscripcion mensual.
 
 ---
 
-## Arquitectura SaaS (fase actual: frontend demo)
+## Arquitectura SaaS (fase actual: multi-cuenta integrada)
+
+El desarrollador inicia como `SUPERADMIN`. Desde Gestión de usuarios crea un
+parqueadero nuevo junto con su administrador inicial. Cada parqueadero es un
+tenant independiente; su administrador crea operadores o más administradores
+solo dentro de ese tenant. El frontend usa la API JWT cuando el backend está
+activo y conserva el modo local únicamente como demostración sin servidor.
 
 ### Capa de datos: `storage.js`
 
@@ -124,12 +130,28 @@ antes de que se ejecute cualquier otro codigo.
 
 ---
 
-## Integracion con backend PostgreSQL (proxima fase)
+## Integración con backend PostgreSQL
+
+### Puesta en marcha local
+
+1. Instala Node.js 18 o superior y PostgreSQL 15 o superior.
+2. Copia `backend/.env.example` como `backend/.env` y reemplaza todas las
+   contraseñas y el secreto JWT de ejemplo.
+3. Desde `backend`, ejecuta `npm install`, `npm run migrate`, `npm run seed`
+   y finalmente `npm start`.
+4. Inicia sesión con el usuario seed. Como `SUPERADMIN`, abre Gestión de
+   usuarios y crea cada parqueadero mediante un código único y su primer
+   administrador.
+
+El servidor no debe exponerse con los valores por defecto del archivo de
+ejemplo. Las migraciones deben ejecutarse con el usuario administrador de
+PostgreSQL y la aplicación con el usuario `mpt_app`.
 
 ### Puntos de integracion marcados en el codigo
 
-Todos los archivos JS tienen comentarios `// TODO (fase backend):`
-indicando exactamente donde se conectara la API REST.
+El inicio de sesión y la gestión de usuarios/parqueaderos ya consumen la API.
+Los módulos de turnos y mensualidades continúan usando el almacenamiento local
+namespaceado mientras se desarrolla su API operativa.
 
 ### Endpoints previstos
 

@@ -57,7 +57,33 @@
         <section class="usr-form-panel" aria-labelledby="formTitle">
           <h2 id="formTitle">CREAR USUARIO</h2>
 
+          <p class="usr-form-message" id="tenantContext" aria-live="polite"></p>
+
           <form id="userForm" novalidate autocomplete="off">
+
+            <!-- Solo SUPERADMIN: cada alta crea un tenant aislado y su ADMIN inicial -->
+            <div id="parkingFields" hidden>
+              <div class="usr-field-group">
+                <label class="usr-field" for="parkingCode">
+                  <span class="usr-field-label">CÓDIGO DEL PARQUEADERO</span>
+                  <input id="parkingCode" name="parkingCode" type="text" maxlength="30" placeholder="EJ: PARK002">
+                  <span class="usr-field-hint">Código único con el que iniciarán sesión sus usuarios.</span>
+                </label>
+              </div>
+              <div class="usr-field-group">
+                <label class="usr-field" for="parkingName">
+                  <span class="usr-field-label">NOMBRE DEL PARQUEADERO</span>
+                  <input id="parkingName" name="parkingName" type="text" maxlength="200" placeholder="Nombre comercial">
+                </label>
+              </div>
+            </div>
+
+            <div class="usr-field-group">
+              <label class="usr-field" for="userName">
+                <span class="usr-field-label">NOMBRE DEL USUARIO</span>
+                <input id="userName" name="userName" type="text" maxlength="150" placeholder="Nombre completo" required>
+              </label>
+            </div>
 
             <!-- ID / Documento -->
             <div class="usr-field-group">

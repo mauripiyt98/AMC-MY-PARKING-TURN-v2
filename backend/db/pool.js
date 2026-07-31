@@ -42,7 +42,7 @@ async function withTenant(parqueaderoId, fn) {
   try {
     await client.query('BEGIN');
     // Inyectar parqueadero_id en la sesión PostgreSQL → activa RLS
-    await client.query(`SET LOCAL app.parqueadero_id = '${parqueaderoId}'`);
+    await client.query("SELECT set_config('app.parqueadero_id', $1, true)", [parqueaderoId]);
     const result = await fn(client);
     await client.query('COMMIT');
     return result;
@@ -71,4 +71,20 @@ async function testConnection() {
   return true;
 }
 
-module.exports = { pool, withTenant, query, testConnection };
+async function withAuthContext(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.request_context', 'auth', true)");
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, withTenant, withAuthContext, query, testConnection };

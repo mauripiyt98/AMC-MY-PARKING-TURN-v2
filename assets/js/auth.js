@@ -48,6 +48,8 @@ const DEFAULT_DEV = {
   role:               'admin',
   email:              'dev@mpt.com',
   codigoParqueadero:  'PARK001',    // Código de parqueadero por defecto (fallback local)
+  // Hash SHA-256 de Dev@12345 con el salt local. Solo se usa sin backend.
+  passwordHash:       '501d412e5dc08822a4629bfe4a3deefc4d60829d8c7e21f3eebd22490b67f74c',
 };
 
 // ── URL del backend ────────────────────────────────────────────
@@ -69,16 +71,16 @@ const PWD_PATTERN  = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 // Garantiza que en cualquier navegador el sistema tenga la base para el modo local.
 (function initStorage() {
   try {
-    if (!localStorage.getItem(MPT_KEYS.devUser)) {
+    const current = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
+    if (!current || !current.passwordHash) {
       localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
+        ...current,
         userId:            DEFAULT_DEV.userId,
         name:              DEFAULT_DEV.name,
         role:              DEFAULT_DEV.role,
         email:             DEFAULT_DEV.email,
         codigoParqueadero: DEFAULT_DEV.codigoParqueadero,
-        // passwordHash vacío = el developer debe configurar su clave
-        // en el primer acceso al módulo de usuarios.
-        passwordHash: null,
+        passwordHash:       DEFAULT_DEV.passwordHash,
       }));
     }
   } catch { /* sin espacio en localStorage */ }
@@ -93,6 +95,16 @@ function showLoginMessage(msg) {
 function generateLocalToken() {
   return 'local_' + Date.now().toString(36) + '_' +
     Math.random().toString(36).slice(2, 10);
+}
+
+async function hashLocalPassword(plainText) {
+  try {
+    const data = new TextEncoder().encode(plainText + '_mpt_salt_parking_v2');
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
 }
 
 // ── Establecer sesión local (sin JWT) ─────────────────────────
@@ -168,8 +180,10 @@ async function intentarBackend(codigoParqueadero, documento, password) {
 //  2. ¿Coincide con credenciales guardadas en localStorage (dev)?
 //  3. ¿Es un usuario cliente independiente registrado?
 // ============================================================
-function validarLocal(codigoParqueadero, userId, password) {
+async function validarLocal(codigoParqueadero, userId, password) {
   const codigoNorm = (codigoParqueadero || '').toUpperCase().trim();
+  const passwordHash = await hashLocalPassword(password);
+  if (!passwordHash) return null;
 
   // ── 1. Verificar usuario DESARROLLADOR ──
   if (userId === DEFAULT_DEV.userId) {
@@ -177,26 +191,12 @@ function validarLocal(codigoParqueadero, userId, password) {
       const stored = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
 
       if (stored && stored.passwordHash) {
-        const isMatch = stored.passwordHash === password ||
-                        stored.passwordHash.startsWith('demo_') ||
-                        stored.passwordHash.length === 64; // SHA-256 hex length
+        const isMatch = stored.passwordHash === passwordHash;
 
         if (isMatch) {
           return {
             userId:           stored.userId || DEFAULT_DEV.userId,
             name:             stored.name   || DEFAULT_DEV.name,
-            role:             'admin',
-            tenantId:         'tenant_default',
-            codigoParqueadero: codigoNorm || DEFAULT_DEV.codigoParqueadero,
-            tipo:             'desarrollador',
-          };
-        }
-      } else {
-        // Sin hash guardado: primer acceso → admitir si la contraseña cumple el formato
-        if (PWD_PATTERN.test(password)) {
-          return {
-            userId:           DEFAULT_DEV.userId,
-            name:             DEFAULT_DEV.name,
             role:             'admin',
             tenantId:         'tenant_default',
             codigoParqueadero: codigoNorm || DEFAULT_DEV.codigoParqueadero,
@@ -221,9 +221,7 @@ function validarLocal(codigoParqueadero, userId, password) {
         // Filtrar por tenantId si coincide con el código de parqueadero
         if (codigoNorm && u.tenantId && u.tenantId !== codigoNorm && u.tenantId !== 'tenant_default') return false;
         if (!u.passwordHash) return false;
-        return u.passwordHash === password ||
-               u.passwordHash.startsWith('demo_') ||
-               u.passwordHash.length === 64;
+        return u.passwordHash === passwordHash;
       });
 
       if (match) {
@@ -297,7 +295,7 @@ loginForm.addEventListener('submit', async (e) => {
     // backendResult === null → backend no disponible, caer a Capa 2
 
     // ── CAPA 2: Validación local (fallback) ──
-    const userData = validarLocal(codigoParqueadero, userId, password);
+    const userData = await validarLocal(codigoParqueadero, userId, password);
     if (userData) {
       setLocalSession(userData);
       window.location.replace('pages/principal.html');
