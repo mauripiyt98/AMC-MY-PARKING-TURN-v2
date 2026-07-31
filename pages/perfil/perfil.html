@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mi perfil | My Parking Turn</title>
+    <meta name="description" content="Perfil comercial del parqueadero en My Parking Turn.">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/perfil.css">
+  </head>
+  <body>
+    <main class="screen screen-profile">
+      <header class="profile-header">
+        <a class="profile-back-link" href="../principal.html" aria-label="Volver a la generación de turnos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          VOLVER A TURNOS
+        </a>
+        <img class="profile-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <div>
+          <p class="profile-eyebrow">SUSCRIPCIÓN SaaS</p>
+          <h1>MI PERFIL</h1>
+          <p>Completa los datos comerciales de tu parqueadero.</p>
+        </div>
+      </header>
+
+      <section class="profile-panel" aria-labelledby="profileFormTitle">
+        <div class="profile-panel-heading">
+          <span class="profile-panel-icon" aria-hidden="true">⌂</span>
+          <div>
+            <h2 id="profileFormTitle">PERFIL DEL PARQUEADERO</h2>
+            <p>Esta información identifica tu cuenta y se mantiene separada de los demás clientes.</p>
+          </div>
+        </div>
+
+        <form id="parkingProfileForm" class="profile-form" novalidate>
+          <label class="profile-field">
+            <span>NOMBRE DEL USUARIO</span>
+            <input id="profileUserName" name="nombreUsuario" type="text" autocomplete="name" maxlength="150" required>
+          </label>
+          <label class="profile-field">
+            <span>NÚMERO DE DOCUMENTO</span>
+            <input id="profileDocument" name="documento" type="text" inputmode="numeric" autocomplete="off" maxlength="20" required>
+          </label>
+          <label class="profile-field profile-field--full">
+            <span>NOMBRE COMERCIAL</span>
+            <input id="profileCommercialName" name="nombreComercial" type="text" autocomplete="organization" maxlength="150" placeholder="Ej.: Parqueadero Pepito SAS" required>
+          </label>
+          <label class="profile-field">
+            <span>CIUDAD</span>
+            <input id="profileCity" name="ciudad" type="text" autocomplete="address-level2" maxlength="100" required>
+          </label>
+          <label class="profile-field">
+            <span>DEPARTAMENTO</span>
+            <input id="profileDepartment" name="departamento" type="text" autocomplete="address-level1" maxlength="100" required>
+          </label>
+          <label class="profile-field">
+            <span>CORREO ELECTRÓNICO</span>
+            <input id="profileEmail" name="correo" type="email" autocomplete="email" maxlength="150" required>
+          </label>
+          <label class="profile-field">
+            <span>DIRECCIÓN</span>
+            <input id="profileAddress" name="direccion" type="text" autocomplete="street-address" maxlength="180" required>
+          </label>
+          <p id="profileMessage" class="profile-message profile-field--full" role="status" aria-live="polite"></p>
+          <button class="primary-action profile-save-button profile-field--full" type="submit">GUARDAR MI PERFIL</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="../../assets/js/session-guard.js"></script>
+    <script src="../../assets/js/storage.js"></script>
+    <script src="../../assets/js/perfil.js"></script>
+  </body>
+</html>

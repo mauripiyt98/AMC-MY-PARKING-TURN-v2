@@ -208,6 +208,7 @@ const KEYS = {
   monthlyRecords:  "mptMonthlyRecords",
   monthlyHistory:  "mptMonthlyHistory",
   monthlyTicket:   "mptNextMonthlyTicket",
+  parkingProfile:  "mptParkingProfile",
   // SECCIÓN 6: Usuarios clientes finales (multicuentas)
   clientUsers:     "mptClientUsers",
   tenants:         "mptTenants",
@@ -267,6 +268,20 @@ function getStoredNextMonthlyTicket() {
 
 function saveNextMonthlyTicket(n) {
   _localSet(KEYS.monthlyTicket, n);
+}
+
+// ============================================================
+// SECCION 5 — PERFIL DEL PARQUEADERO
+// ============================================================
+
+/** Retorna el perfil comercial del parqueadero de la sesión activa. */
+function getParkingProfile() {
+  return _localGet(KEYS.parkingProfile) || null;
+}
+
+/** Guarda el perfil comercial aislado para el parqueadero de la sesión activa. */
+function saveParkingProfile(profile) {
+  _localSet(KEYS.parkingProfile, profile);
 }
 
 // ============================================================
@@ -394,6 +409,9 @@ window.MPTStorage = {
   saveMonthlyHistory,
   getStoredNextMonthlyTicket,
   saveNextMonthlyTicket,
+  // Perfil del parqueadero
+  getParkingProfile,
+  saveParkingProfile,
   // Usuarios clientes finales (MULTICUENTAS - preparado)
   getUsers,
   saveUsers,

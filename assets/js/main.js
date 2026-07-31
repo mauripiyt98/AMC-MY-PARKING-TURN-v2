@@ -34,10 +34,20 @@ const deleteMessage        = document.querySelector("#deleteMessage");
 const cancelDelete         = document.querySelector("#cancelDelete");
 const logoutButton         = document.querySelector("#logoutButton");
 const manageUsersLink      = document.querySelector("#btnGestionUsuarios");
+const welcomeMessage       = document.querySelector("#welcomeMessage");
 
 // ===== Estado local =====
 let pendingExitIndex = null;
 let pendingDelete    = null;
+
+function renderWelcomeMessage() {
+  if (!welcomeMessage) return;
+  const profile = MPTStorage.getParkingProfile();
+  const commercialName = String(profile?.nombreComercial || '').trim();
+  welcomeMessage.textContent = commercialName
+    ? `BIENVENIDO ${commercialName.toUpperCase()}`
+    : 'BIENVENIDO';
+}
 
 // ============================================================
 // UTILIDADES DE FORMATO
@@ -531,6 +541,8 @@ if (manageUsersLink) {
     manageUsersLink.remove();
   }
 }
+
+renderWelcomeMessage();
 
 plateForm.addEventListener("submit", (event) => {
   event.preventDefault();

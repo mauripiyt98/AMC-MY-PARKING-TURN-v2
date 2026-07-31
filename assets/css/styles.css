@@ -77,6 +77,50 @@ a {
   letter-spacing: 0;
 }
 
+.profile-action {
+  position: absolute;
+  top: 88px;
+  left: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 238px;
+  min-height: 198px;
+  border: 2px solid var(--color-ink);
+  border-radius: 8px;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-control);
+  font-size: 16px;
+  font-weight: 800;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.profile-action:hover,
+.profile-action:focus-visible {
+  border-color: var(--color-red-dark);
+  color: var(--color-red-dark);
+  background: var(--color-red-soft);
+  transform: translateY(-2px);
+}
+
+.welcome-message {
+  width: min(92vw, 620px);
+  min-height: 50px;
+  margin: 8px auto 0;
+  border: 2px solid var(--color-ink);
+  border-radius: 6px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--color-ink);
+  text-align: center;
+  font-size: clamp(17px, 2.2vw, 22px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
 .login-panel,
 .plate-panel,
 .records-panel {
@@ -1249,10 +1293,24 @@ a {
   .side-module {
     display: none;
   }
+
+  .profile-action {
+    position: static;
+    width: min(92vw, 320px);
+    min-height: 52px;
+    margin-bottom: 8px;
+  }
 }
 
 /* En pantallas medianas mostrar el panel lateral mas compacto */
 @media (min-width: 821px) and (max-width: 1180px) {
+  .profile-action {
+    top: 42px;
+    left: 20px;
+    width: 160px;
+    min-height: 74px;
+  }
+
   .side-module {
     width: clamp(110px, 11vw, 150px);
     padding: 28px 10px 20px;
@@ -1288,4 +1346,3 @@ a {
     width: min(94vw, 100%) !important;
   }
 }
-
