@@ -77,6 +77,12 @@ router.post('/',
       try {
         await client.query('BEGIN');
         await client.query("SELECT set_config('app.request_context', 'system', true)");
+        const { rows: existingUser } = await client.query(
+          'SELECT id FROM usuarios WHERE documento = $1', [admin_documento]
+        );
+        if (existingUser.length) {
+          throw new ConflictError(`Ya existe un usuario con el documento ${admin_documento}`);
+        }
 
         // 1. Crear parqueadero (tenant)
         const { rows: parkRows } = await client.query(

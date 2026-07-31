@@ -4,7 +4,7 @@
 // SISTEMA EN DOS CAPAS (arquitectura multicuentas):
 //
 //  CAPA 1 — Backend JWT (activa — requiere servidor corriendo):
-//    Hace POST /api/auth/login con { codigo_parqueadero, documento, password }
+//    Hace POST /api/auth/login con { documento, password }
 //    Si tiene éxito, guarda el JWT en sessionStorage.
 //    Esta capa es PRIORITARIA sobre la local.
 //
@@ -58,7 +58,6 @@ const API_BASE = 'http://localhost:3000/api';
 // ─────────────────────────────────────────────────────────────
 
 const loginForm              = document.getElementById('loginForm');
-const codigoParqueaderoInput = document.getElementById('codigoParqueadero');
 const usuarioInput           = document.getElementById('usuario');
 const contrasenaInput        = document.getElementById('contrasena');
 const loginMessage           = document.getElementById('loginMessage');
@@ -137,7 +136,7 @@ function setJwtSession(data) {
 // ============================================================
 // CAPA 1 — BACKEND JWT (activa — intentar primero)
 // ============================================================
-async function intentarBackend(codigoParqueadero, documento, password) {
+async function intentarBackend(documento, password) {
   try {
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 4000);
@@ -145,7 +144,7 @@ async function intentarBackend(codigoParqueadero, documento, password) {
     const response = await fetch(`${API_BASE}/auth/login`, {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ codigo_parqueadero: codigoParqueadero, documento, password }),
+      body   : JSON.stringify({ documento, password }),
       signal : controller.signal,
     });
     clearTimeout(timeoutId);
@@ -180,8 +179,7 @@ async function intentarBackend(codigoParqueadero, documento, password) {
 //  2. ¿Coincide con credenciales guardadas en localStorage (dev)?
 //  3. ¿Es un usuario cliente independiente registrado?
 // ============================================================
-async function validarLocal(codigoParqueadero, userId, password) {
-  const codigoNorm = (codigoParqueadero || '').toUpperCase().trim();
+async function validarLocal(userId, password) {
   const passwordHash = await hashLocalPassword(password);
   if (!passwordHash) return null;
 
@@ -199,7 +197,7 @@ async function validarLocal(codigoParqueadero, userId, password) {
             name:             stored.name   || DEFAULT_DEV.name,
             role:             'admin',
             tenantId:         'tenant_default',
-            codigoParqueadero: codigoNorm || DEFAULT_DEV.codigoParqueadero,
+            codigoParqueadero: stored.codigoParqueadero || DEFAULT_DEV.codigoParqueadero,
             tipo:             'desarrollador',
           };
         }
@@ -218,8 +216,6 @@ async function validarLocal(codigoParqueadero, userId, password) {
       const match = usuarios.find((u) => {
         if (u.id !== userId) return false;
         if (u.status === 'inactive') return false;
-        // Filtrar por tenantId si coincide con el código de parqueadero
-        if (codigoNorm && u.tenantId && u.tenantId !== codigoNorm && u.tenantId !== 'tenant_default') return false;
         if (!u.passwordHash) return false;
         return u.passwordHash === passwordHash;
       });
@@ -229,8 +225,8 @@ async function validarLocal(codigoParqueadero, userId, password) {
           userId:           match.id,
           name:             match.name || `Usuario ${match.id}`,
           role:             match.role || 'operator',
-          tenantId:         match.tenantId || codigoNorm || 'tenant_default',
-          codigoParqueadero: codigoNorm,
+          tenantId:         match.tenantId || 'tenant_default',
+          codigoParqueadero: match.tenantId || 'PARK001',
           tipo:             'independiente',
         };
       }
@@ -246,7 +242,6 @@ async function validarLocal(codigoParqueadero, userId, password) {
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const codigoParqueadero = (codigoParqueaderoInput ? codigoParqueaderoInput.value.trim() : 'PARK001').toUpperCase();
   const userId            = usuarioInput.value.trim();
   const password          = contrasenaInput.value;
 
@@ -263,12 +258,6 @@ loginForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  if (!codigoParqueadero) {
-    showLoginMessage('Ingresa el código de tu parqueadero.');
-    if (codigoParqueaderoInput) codigoParqueaderoInput.focus();
-    return;
-  }
-
   showLoginMessage('');
 
   // Cambiar estado del botón
@@ -277,7 +266,7 @@ loginForm.addEventListener('submit', async (e) => {
 
   try {
     // ── CAPA 1: Intentar backend JWT ──
-    const backendResult = await intentarBackend(codigoParqueadero, userId, password);
+    const backendResult = await intentarBackend(userId, password);
 
     if (backendResult === true) {
       // Backend autenticó exitosamente
@@ -295,7 +284,7 @@ loginForm.addEventListener('submit', async (e) => {
     // backendResult === null → backend no disponible, caer a Capa 2
 
     // ── CAPA 2: Validación local (fallback) ──
-    const userData = await validarLocal(codigoParqueadero, userId, password);
+    const userData = await validarLocal(userId, password);
     if (userData) {
       setLocalSession(userData);
       window.location.replace('pages/principal.html');
@@ -303,7 +292,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
 
     // Sin coincidencia en ninguna capa
-    showLoginMessage('Código de parqueadero, usuario o contraseña incorrectos.');
+    showLoginMessage('Usuario o contraseña incorrectos.');
     contrasenaInput.value = '';
     contrasenaInput.focus();
 
@@ -317,15 +306,5 @@ usuarioInput.addEventListener('input', () => {
   usuarioInput.value = usuarioInput.value.replace(/\D/g, '').slice(0, 15);
   showLoginMessage('');
 });
-
-// ── Mayúsculas automáticas en código parqueadero ─────────────
-if (codigoParqueaderoInput) {
-  codigoParqueaderoInput.addEventListener('input', () => {
-    const pos = codigoParqueaderoInput.selectionStart;
-    codigoParqueaderoInput.value = codigoParqueaderoInput.value.toUpperCase();
-    codigoParqueaderoInput.setSelectionRange(pos, pos);
-    showLoginMessage('');
-  });
-}
 
 contrasenaInput.addEventListener('input', () => showLoginMessage(''));

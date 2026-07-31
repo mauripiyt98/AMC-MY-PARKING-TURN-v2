@@ -226,7 +226,7 @@ form.addEventListener('submit', async (event) => {
     } else {
       const all = MPTStorage.getUsers();
       const tenantId = isSuperadmin() ? fields.parkingCode.value.trim().toUpperCase() : MPTStorage.getActiveTenantId();
-      if (all.some((user) => user.id === fields.document.value.trim() && user.tenantId === tenantId)) throw new Error('Ese documento ya está registrado en este parqueadero.');
+      if (all.some((user) => user.id === fields.document.value.trim())) throw new Error('Ese documento ya está registrado en el sistema.');
       all.push({ id: fields.document.value.trim(), name: fields.name.value.trim(), email: fields.email.value.trim().toLowerCase(), passwordHash: await hashLocalPassword(fields.password.value), role: isSuperadmin() ? 'admin' : selectedRole, status: 'active', tenantId, createdAt: new Date().toISOString() });
       MPTStorage.saveUsers(all);
       showToast(isSuperadmin() ? `Cuenta local ${tenantId} creada.` : 'Usuario local creado.', 'success');

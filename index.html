@@ -17,20 +17,6 @@
         <h2 id="login-title">INICIO DE SESION</h2>
         <form id="loginForm" novalidate>
 
-          <!-- Campo código de parqueadero (identificador del tenant) -->
-          <label class="field">
-            <span>CÓDIGO PARQUEADERO</span>
-            <input
-              id="codigoParqueadero"
-              name="codigoParqueadero"
-              type="text"
-              autocomplete="organization"
-              maxlength="30"
-              placeholder="Ej: PARK001"
-              required
-            >
-          </label>
-
           <label class="field">
             <span>USUARIO</span>
             <input
@@ -42,7 +28,7 @@
               minlength="5"
               maxlength="15"
               pattern="[0-9]{5,15}"
-              placeholder="Nº Cédula / NIT / Pasaporte"
+              placeholder="USUARIO"
               required
             >
           </label>
@@ -55,6 +41,7 @@
               type="password"
               autocomplete="current-password"
               minlength="6"
+              placeholder="CONTRASEÑA"
               required
             >
           </label>

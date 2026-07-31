@@ -2,6 +2,7 @@
 
 const router              = require('express').Router();
 const Usuario             = require('../models/Usuario');
+const { withAuthContext } = require('../db/pool');
 const { hashPassword }    = require('../utils/crypto');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { tenantMiddleware } = require('../middleware/tenant');
@@ -61,13 +62,13 @@ router.post('/',
         throw new ValidationError(`Rol inválido. Permitidos: ${rolesPermitidos.join(', ')}`);
       }
 
-      // Verificar duplicado dentro del parqueadero
-      const { rows } = await req.dbClient.query(
-        `SELECT id FROM usuarios WHERE parqueadero_id = $1 AND documento = $2`,
-        [req.parqueaderoId, documento]
-      );
+      // El documento es único globalmente porque el login no solicita tenant.
+      const { rows } = await withAuthContext((client) => client.query(
+        `SELECT id FROM usuarios WHERE documento = $1`,
+        [documento]
+      ));
       if (rows.length) {
-        throw new ConflictError(`Ya existe un usuario con el documento ${documento} en este parqueadero`);
+        throw new ConflictError(`Ya existe un usuario con el documento ${documento}`);
       }
 
       const password_hash = await hashPassword(password);

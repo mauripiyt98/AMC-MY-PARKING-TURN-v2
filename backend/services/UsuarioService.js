@@ -23,40 +23,33 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
  */
 class UsuarioService {
   /**
-   * Login: valida credenciales y emite un JWT con parqueadero_id embebido.
+   * Login: identifica el tenant a partir de un documento único y emite JWT.
    *
-   * @param {string} codigoParqueadero - Código del parqueadero (ej: PARK001)
    * @param {string} documento         - Documento de identidad del usuario
    * @param {string} password          - Contraseña en texto plano
    * @param {object} meta              - { ip, userAgent } para auditoría
    */
-  static async login(codigoParqueadero, documento, password, meta = {}) {
+  static async login(documento, password, meta = {}) {
     return withAuthContext(async (client) => {
-    // 1. Buscar parqueadero por código
-    const { rows: parkRows } = await client.query(
-      `SELECT id, nombre, codigo, activo FROM parqueaderos WHERE codigo = $1`,
-      [codigoParqueadero.toUpperCase().trim()]
-    );
-    const parqueadero = parkRows[0];
-
-    // Mismo mensaje genérico para no revelar qué campo falló
-    if (!parqueadero) throw new UnauthorizedError('Código de parqueadero, documento o contraseña incorrectos');
-    if (!parqueadero.activo) throw new UnauthorizedError('El parqueadero está desactivado. Contacte al administrador.');
-
-    // 2. Buscar usuario en ese parqueadero
+    // El documento es único en todo el sistema. Así no se expone ni se pide
+    // el identificador del parqueadero en la pantalla de inicio de sesión.
     const { rows: userRows } = await client.query(
-      `SELECT id, parqueadero_id, nombre, documento, password_hash, rol, activo
-       FROM usuarios WHERE parqueadero_id = $1 AND documento = $2`,
-      [parqueadero.id, documento]
+      `SELECT u.id, u.parqueadero_id, u.nombre, u.documento, u.password_hash, u.rol, u.activo,
+              p.nombre AS parqueadero_nombre, p.codigo AS parqueadero_codigo, p.activo AS parqueadero_activo
+       FROM usuarios u
+       JOIN parqueaderos p ON p.id = u.parqueadero_id
+       WHERE u.documento = $1`,
+      [documento]
     );
     const usuario = userRows[0];
 
-    if (!usuario) throw new UnauthorizedError('Código de parqueadero, documento o contraseña incorrectos');
+    if (!usuario) throw new UnauthorizedError('Usuario o contraseña incorrectos');
+    if (!usuario.parqueadero_activo) throw new UnauthorizedError('El parqueadero está desactivado. Contacte al administrador.');
     if (!usuario.activo) throw new UnauthorizedError('Usuario desactivado. Contacte al administrador.');
 
     // 3. Verificar contraseña con bcrypt
     const ok = await comparePassword(password, usuario.password_hash);
-    if (!ok) throw new UnauthorizedError('Código de parqueadero, documento o contraseña incorrectos');
+    if (!ok) throw new UnauthorizedError('Usuario o contraseña incorrectos');
 
     // 4. Generar JWT con parqueadero_id y jti para revocación
     const jti = generateJti();
@@ -79,7 +72,7 @@ class UsuarioService {
     await client.query(
       `INSERT INTO sesiones_jwt (usuario_id, parqueadero_id, jti, expira_en, ip_origen, user_agent)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [usuario.id, parqueadero.id, jti, expDate, meta.ip || null, meta.userAgent || null]
+      [usuario.id, usuario.parqueadero_id, jti, expDate, meta.ip || null, meta.userAgent || null]
     );
 
     // 6. Actualizar último acceso
@@ -96,9 +89,9 @@ class UsuarioService {
         nombre        : usuario.nombre,
         documento     : usuario.documento,
         rol           : usuario.rol,
-        parqueadero_id: parqueadero.id,
-        parqueadero   : parqueadero.nombre,
-        codigo_parqueadero: parqueadero.codigo,
+        parqueadero_id: usuario.parqueadero_id,
+        parqueadero   : usuario.parqueadero_nombre,
+        codigo_parqueadero: usuario.parqueadero_codigo,
       },
     };
     });

@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     ultimo_acceso   TIMESTAMPTZ,
     creado_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     actualizado_en  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    -- El mismo documento puede existir en parqueaderos distintos, pero no dentro del mismo
-    CONSTRAINT usuarios_parqueadero_documento_unique UNIQUE (parqueadero_id, documento)
+    -- El documento identifica al usuario al iniciar sesión y debe ser único globalmente
+    CONSTRAINT usuarios_documento_unique UNIQUE (documento)
 );
 
 COMMENT ON TABLE  usuarios IS 'Usuarios del sistema, siempre vinculados a un parqueadero (tenant)';
