@@ -126,6 +126,15 @@
     return;
   }
 
+  // Algunas pantallas son exclusivas del desarrollador. La comprobación vive
+  // en la guarda de sesión para impedir el acceso directo por URL.
+  var requiredRole = document.body && document.body.dataset.requiredRole;
+  var activeRole = (sessionStorage.getItem('mptRole') || '').toLowerCase();
+  if (requiredRole && activeRole !== requiredRole.toLowerCase()) {
+    window.location.replace('../principal.html');
+    return;
+  }
+
   // TODO (fase backend): validar el token remotamente antes de continuar
   // fetch('/api/auth/verify', {
   //   headers: { Authorization: 'Bearer ' + sessionStorage.getItem('mptSessionToken') }

@@ -1,7 +1,6 @@
 'use strict';
 
-// Gestión multi-cuenta. El SUPERADMIN crea un parqueadero con su ADMIN
-// inicial; cada ADMIN solamente administra los usuarios de su tenant.
+// Gestión de cuentas exclusiva del SUPERADMIN (desarrollador).
 const USERS_API_BASE = 'http://localhost:3000/api';
 const PASSWORD_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const DOCUMENT_RE = /^\d{5,20}$/;
@@ -42,7 +41,7 @@ function role() {
 }
 
 function isSuperadmin() { return role() === 'superadmin'; }
-function canManageUsers() { return ['admin', 'superadmin'].includes(role()); }
+function canManageUsers() { return isSuperadmin(); }
 function isBackendSession() {
   try {
     const session = JSON.parse(sessionStorage.getItem('mptSessionV2') || 'null');
@@ -71,9 +70,7 @@ async function request(path, options = {}) {
 function localUsers() {
   const all = MPTStorage.getUsers();
   // El desarrollador ve las cuentas de todos los clientes en modo local.
-  if (isSuperadmin()) return all;
-  const tenant = MPTStorage.getActiveTenantId();
-  return all.filter((user) => (user.tenantId || 'tenant_default') === tenant);
+  return isSuperadmin() ? all : [];
 }
 
 function mapApiUser(user) {
@@ -183,7 +180,6 @@ async function loadUsers() {
 function configureScreen() {
   const label = document.getElementById('roleLabel');
   const title = document.getElementById('formTitle');
-  const admin = canManageUsers();
   label.textContent = isSuperadmin() ? 'DESARROLLADOR' : role() === 'admin' ? 'ADMINISTRADOR' : 'OPERADOR';
   parkingFields.hidden = !isSuperadmin();
   if (isSuperadmin()) {
@@ -191,9 +187,6 @@ function configureScreen() {
     tenantContext.textContent = 'Cada alta crea una cuenta independiente: sus usuarios y datos no se comparten con otros parqueaderos.';
     document.querySelector('input[name="userRole"][value="admin"]').checked = true;
     document.querySelectorAll('input[name="userRole"]').forEach((input) => { input.disabled = true; });
-  } else if (admin) {
-    title.textContent = 'CREAR USUARIO DEL PARQUEADERO';
-    tenantContext.textContent = `Usuarios para ${MPTStorage.getActiveCodigoParqueadero()}. Solo verán los datos de este parqueadero.`;
   } else {
     form.innerHTML = '<p class="usr-form-message msg-error">No tienes permisos para administrar usuarios.</p>';
   }

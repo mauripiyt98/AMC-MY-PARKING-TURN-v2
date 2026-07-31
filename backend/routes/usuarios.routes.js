@@ -17,7 +17,7 @@ const {
 router.use(authMiddleware, tenantMiddleware);
 
 // ── GET /api/usuarios  — Listar usuarios del parqueadero ──────────────────────
-router.get('/', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.get('/', requireRole('SUPERADMIN'), async (req, res, next) => {
   try {
     const soloActivos = req.query.activos === 'true';
     const usuarios = await Usuario.findAll(req.dbClient, req.parqueaderoId, { soloActivos });
@@ -28,7 +28,7 @@ router.get('/', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
 });
 
 // ── GET /api/usuarios/:id  — Obtener usuario por ID ──────────────────────────
-router.get('/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.get('/:id', requireRole('SUPERADMIN'), async (req, res, next) => {
   try {
     const usuario = await Usuario.findById(req.dbClient, req.parqueaderoId, req.params.id);
     if (!usuario) throw new NotFoundError('Usuario');
@@ -38,9 +38,9 @@ router.get('/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) =>
   }
 });
 
-// ── POST /api/usuarios  — Crear usuario independiente (solo ADMIN/SUPERADMIN) ─
+// ── POST /api/usuarios  — Crear usuario independiente (solo SUPERADMIN) ──────
 router.post('/',
-  requireRole('ADMIN', 'SUPERADMIN'),
+  requireRole('SUPERADMIN'),
   validateBody({
     nombre  : [required('Nombre requerido'), minLen(2, 'Nombre muy corto'), maxLen(150, 'Nombre muy largo')],
     documento: [required('Documento requerido'), minLen(5, 'Documento mínimo 5 dígitos'), maxLen(20, 'Documento muy largo')],
@@ -85,7 +85,7 @@ router.post('/',
 
 // ── PATCH /api/usuarios/:id  — Actualizar usuario ────────────────────────────
 router.patch('/:id',
-  requireRole('ADMIN', 'SUPERADMIN'),
+  requireRole('SUPERADMIN'),
   async (req, res, next) => {
     try {
       const { nombre, email, rol, activo, password } = req.body;
@@ -129,7 +129,7 @@ router.patch('/:id',
 );
 
 // ── DELETE /api/usuarios/:id  — Desactivar usuario (soft delete) ──────────────
-router.delete('/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.delete('/:id', requireRole('SUPERADMIN'), async (req, res, next) => {
   try {
     // Evitar que el admin se elimine a sí mismo
     if (req.params.id === String(req.user.id)) {

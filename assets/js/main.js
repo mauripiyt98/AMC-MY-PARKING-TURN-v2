@@ -522,10 +522,14 @@ logoutButton.addEventListener("click", () => {
   window.location.href = "../index.html";
 });
 
-// La pantalla de administración no se ofrece a operadores. El backend
-// mantiene la misma regla y es la autoridad final de autorización.
-if (manageUsersLink && !['admin', 'superadmin'].includes(MPTStorage.getActiveUserRole())) {
-  manageUsersLink.hidden = true;
+// La creación de cuentas es exclusiva del desarrollador. El enlace nace
+// oculto para que nunca se muestre a una cuenta cliente antes de esta validación.
+if (manageUsersLink) {
+  if (MPTStorage.getActiveUserRole() === 'superadmin') {
+    manageUsersLink.hidden = false;
+  } else {
+    manageUsersLink.remove();
+  }
 }
 
 plateForm.addEventListener("submit", (event) => {
