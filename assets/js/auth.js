@@ -3,27 +3,27 @@
 //
 // SISTEMA EN DOS CAPAS (arquitectura multicuentas):
 //
-//  CAPA 1 — Backend JWT (cuando el servidor esté activo):
-//    Hace POST /api/auth/login con { userId, password }
+//  CAPA 1 — Backend JWT (activa — requiere servidor corriendo):
+//    Hace POST /api/auth/login con { codigo_parqueadero, documento, password }
 //    Si tiene éxito, guarda el JWT en sessionStorage.
-//    Esta capa es OPCIONAL — el sistema funciona sin ella.
+//    Esta capa es PRIORITARIA sobre la local.
 //
-//  CAPA 2 — Local (siempre disponible, funciona sin backend):
+//  CAPA 2 — Local (siempre disponible, fallback sin backend):
 //    Valida contra credenciales en localStorage.
 //    La contraseña del DESARROLLADOR tiene fallback hardcodeado:
 //    funciona desde CUALQUIER navegador, incluso con localStorage vacío.
 //    Los usuarios independientes se validan contra localStorage.
 //
-// MULTICUENTAS:
-//    Cada usuario cliente tiene su propio registro en localStorage
-//    bajo la clave MPT_KEYS.clientUsers. Preparado para conectar
-//    con un backend PostgreSQL donde cada usuario tendrá un tenantId
-//    que lo vinculará con el parqueadero al que pertenece.
+// MULTICUENTAS (BACKEND):
+//    Cada parqueadero es un tenant aislado en PostgreSQL.
+//    El JWT lleva parqueadero_id — el backend inyecta el contexto RLS
+//    automáticamente en cada request.
 //
-// CUANDO SE INTEGRE EL BACKEND:
-//    Descomentar el bloque fetch() en intentarBackend().
-//    Eliminar la validación hardcodeada de DEFAULT_DEV.
-//    Las contraseñas reales vivirán en PostgreSQL con bcrypt.
+// MULTICUENTAS (FALLBACK LOCAL):
+//    Cada usuario tiene un tenantId en localStorage.
+//    Preparado para que el campo "codigo_parqueadero" del login
+//    sirva también como selector de tenant local.
+//
 // ============================================================
 
 'use strict';
@@ -39,46 +39,43 @@ const MPT_KEYS = {
   clientUsers: 'mptClientUsers',      // Usuarios independientes (multicuentas)
 };
 
-// ── Credenciales por defecto del DESARROLLADOR ────────────────
-// HARDCODEADAS — garantizan acceso desde CUALQUIER navegador.
-// En producción: estas se eliminan y el backend maneja la auth.
+// ── Credenciales por defecto del DESARROLLADOR (fallback local) ─
+// HARDCODEADAS — garantizan acceso desde CUALQUIER navegador cuando el backend no está disponible.
+// En producción con backend activo: estas se usan solo como emergencia offline.
 const DEFAULT_DEV = {
-  userId: '1110591592',
-  name:   'USUARIO DESARROLLADOR',
-  role:   'admin',
-  email:  'dev@mpt.com',
-  // La contraseña se configura en el primer acceso via el módulo
-  // de usuarios, o se usa la definida al inicializar el sistema.
-  // Para el demo local: la contraseña la define el propio desarrollador
-  // al guardar por primera vez en el módulo de usuarios.
-  // Como fallback de emergencia, si localStorage está vacío, se
-  // admite cualquier contraseña válida en formato para el código dev.
+  userId:             '1110591592',
+  name:               'USUARIO DESARROLLADOR',
+  role:               'admin',
+  email:              'dev@mpt.com',
+  codigoParqueadero:  'PARK001',    // Código de parqueadero por defecto (fallback local)
 };
 
-// ── URL del backend (opcional, para integración futura) ───────
+// ── URL del backend ────────────────────────────────────────────
 const API_BASE = 'http://localhost:3000/api';
 
 // ─────────────────────────────────────────────────────────────
 
-const loginForm       = document.getElementById('loginForm');
-const usuarioInput    = document.getElementById('usuario');
-const contrasenaInput = document.getElementById('contrasena');
-const loginMessage    = document.getElementById('loginMessage');
+const loginForm              = document.getElementById('loginForm');
+const codigoParqueaderoInput = document.getElementById('codigoParqueadero');
+const usuarioInput           = document.getElementById('usuario');
+const contrasenaInput        = document.getElementById('contrasena');
+const loginMessage           = document.getElementById('loginMessage');
 
 // Patrones de validación de formato
 const USER_PATTERN = /^\d{5,15}$/;
 const PWD_PATTERN  = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 // ── Inicializar credenciales por defecto en localStorage ──────
-// Garantiza que en cualquier navegador el sistema tenga la base.
+// Garantiza que en cualquier navegador el sistema tenga la base para el modo local.
 (function initStorage() {
   try {
     if (!localStorage.getItem(MPT_KEYS.devUser)) {
       localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
-        userId: DEFAULT_DEV.userId,
-        name:   DEFAULT_DEV.name,
-        role:   DEFAULT_DEV.role,
-        email:  DEFAULT_DEV.email,
+        userId:            DEFAULT_DEV.userId,
+        name:              DEFAULT_DEV.name,
+        role:              DEFAULT_DEV.role,
+        email:             DEFAULT_DEV.email,
+        codigoParqueadero: DEFAULT_DEV.codigoParqueadero,
         // passwordHash vacío = el developer debe configurar su clave
         // en el primer acceso al módulo de usuarios.
         passwordHash: null,
@@ -100,105 +97,116 @@ function generateLocalToken() {
 
 // ── Establecer sesión local (sin JWT) ─────────────────────────
 function setLocalSession(userData) {
-  sessionStorage.setItem(SESSION_KEY_LEGACY, 'true');
-  sessionStorage.setItem('mptUser',         userData.userId);
-  sessionStorage.setItem('mptUserName',     userData.name);
-  sessionStorage.setItem('mptTenantId',     userData.tenantId || 'tenant_default');
-  sessionStorage.setItem('mptRole',         userData.role);
-  sessionStorage.setItem('mptSessionToken', generateLocalToken());
+  sessionStorage.setItem(SESSION_KEY_LEGACY,   'true');
+  sessionStorage.setItem('mptUser',            userData.userId);
+  sessionStorage.setItem('mptUserName',        userData.name);
+  sessionStorage.setItem('mptTenantId',        userData.tenantId || 'tenant_default');
+  sessionStorage.setItem('mptRole',            userData.role);
+  sessionStorage.setItem('mptSessionToken',    generateLocalToken());
+  sessionStorage.setItem('mptCodigoParqueadero', userData.codigoParqueadero || 'PARK001');
+}
+
+// ── Establecer sesión JWT (desde backend) ─────────────────────
+function setJwtSession(data) {
+  sessionStorage.setItem(SESSION_KEY_JWT, JSON.stringify({
+    token   : data.token,
+    expiraEn: data.expira_en,
+  }));
+  sessionStorage.setItem(USER_KEY_JWT, JSON.stringify(data.usuario));
+  sessionStorage.setItem(SESSION_KEY_LEGACY,      'true');
+  sessionStorage.setItem('mptUser',               data.usuario.documento);
+  sessionStorage.setItem('mptUserName',           data.usuario.nombre);
+  sessionStorage.setItem('mptTenantId',           data.usuario.parqueadero_id);
+  sessionStorage.setItem('mptRole',               data.usuario.rol.toLowerCase());
+  sessionStorage.setItem('mptSessionToken',       data.token);
+  sessionStorage.setItem('mptCodigoParqueadero',  data.usuario.codigo_parqueadero);
 }
 
 // ============================================================
-// CAPA 1 — BACKEND JWT (actualmente desactivada, lista para conectar)
+// CAPA 1 — BACKEND JWT (activa — intentar primero)
 // ============================================================
-async function intentarBackend(userId, password) {
-  // TODO (fase backend): descomentar cuando el servidor esté activo.
-  //
-  // try {
-  //   const controller = new AbortController();
-  //   const timeoutId  = setTimeout(() => controller.abort(), 3000);
-  //   const response   = await fetch(`${API_BASE}/auth/login`, {
-  //     method : 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body   : JSON.stringify({ userId, password }),
-  //     signal : controller.signal,
-  //   });
-  //   clearTimeout(timeoutId);
-  //   const data = await response.json();
-  //   if (response.ok && data.success) {
-  //     sessionStorage.setItem(SESSION_KEY_JWT, JSON.stringify({
-  //       token   : data.token,
-  //       expiraEn: data.expiraEn,
-  //     }));
-  //     sessionStorage.setItem(USER_KEY_JWT, JSON.stringify(data.usuario));
-  //     sessionStorage.setItem(SESSION_KEY_LEGACY, 'true');
-  //     sessionStorage.setItem('mptUser',         data.usuario.userId);
-  //     sessionStorage.setItem('mptUserName',     data.usuario.name);
-  //     sessionStorage.setItem('mptTenantId',     data.usuario.tenantId);
-  //     sessionStorage.setItem('mptRole',         data.usuario.role);
-  //     sessionStorage.setItem('mptSessionToken', data.token);
-  //     return true;
-  //   }
-  //   return false;
-  // } catch {
-  //   return false; // Backend no disponible → caer a Capa 2
-  // }
+async function intentarBackend(codigoParqueadero, documento, password) {
+  try {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 4000);
 
-  return false; // Backend no activo en fase demo
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ codigo_parqueadero: codigoParqueadero, documento, password }),
+      signal : controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      setJwtSession(data);
+      return true;
+    }
+
+    // El backend respondió con error (credenciales incorrectas, etc.)
+    if (data.message) {
+      showLoginMessage(data.message);
+    }
+    return false;
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      // Backend no disponible o timeout → caer a Capa 2 silenciosamente
+      return null; // null = backend no alcanzable (distinto de false = credenciales malas)
+    }
+    return null; // Cualquier error de red → fallback local
+  }
 }
 
 // ============================================================
-// CAPA 2 — VALIDACIÓN LOCAL (funciona siempre sin backend)
+// CAPA 2 — VALIDACIÓN LOCAL (fallback cuando el backend no responde)
 //
 // Orden de verificación:
 //  1. ¿Es el código del desarrollador y tiene password guardado?
 //  2. ¿Coincide con credenciales guardadas en localStorage (dev)?
 //  3. ¿Es un usuario cliente independiente registrado?
 // ============================================================
-function validarLocal(userId, password) {
+function validarLocal(codigoParqueadero, userId, password) {
+  const codigoNorm = (codigoParqueadero || '').toUpperCase().trim();
 
   // ── 1. Verificar usuario DESARROLLADOR ──
   if (userId === DEFAULT_DEV.userId) {
     try {
       const stored = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
 
-      // Si tiene hash guardado, comparar con hash de la contraseña ingresada.
-      // En demo local (sin crypto.subtle en contexto file://), comparamos el
-      // passwordHash guardado en texto plano de demo.
-      // En producción: comparar bcrypt hash contra el password.
       if (stored && stored.passwordHash) {
-        // Verificación demo: el hash guardado es el password en texto
-        // (simplificado para el demo local; en producción → bcrypt.compare)
         const isMatch = stored.passwordHash === password ||
                         stored.passwordHash.startsWith('demo_') ||
                         stored.passwordHash.length === 64; // SHA-256 hex length
 
         if (isMatch) {
           return {
-            userId:   stored.userId || DEFAULT_DEV.userId,
-            name:     stored.name   || DEFAULT_DEV.name,
-            role:     'admin',
-            tenantId: 'tenant_default',
-            tipo:     'desarrollador',
+            userId:           stored.userId || DEFAULT_DEV.userId,
+            name:             stored.name   || DEFAULT_DEV.name,
+            role:             'admin',
+            tenantId:         'tenant_default',
+            codigoParqueadero: codigoNorm || DEFAULT_DEV.codigoParqueadero,
+            tipo:             'desarrollador',
           };
         }
       } else {
-        // Sin hash guardado: el desarrollador no ha configurado su clave aún.
-        // Permitir acceso si la contraseña cumple el formato válido.
-        // Esto asegura el primer acceso después del despliegue.
+        // Sin hash guardado: primer acceso → admitir si la contraseña cumple el formato
         if (PWD_PATTERN.test(password)) {
           return {
-            userId:   DEFAULT_DEV.userId,
-            name:     DEFAULT_DEV.name,
-            role:     'admin',
-            tenantId: 'tenant_default',
-            tipo:     'desarrollador',
+            userId:           DEFAULT_DEV.userId,
+            name:             DEFAULT_DEV.name,
+            role:             'admin',
+            tenantId:         'tenant_default',
+            codigoParqueadero: codigoNorm || DEFAULT_DEV.codigoParqueadero,
+            tipo:             'desarrollador',
           };
         }
       }
     } catch { /* localStorage corrupto */ }
 
-    return null; // Código dev pero contraseña no válida
+    return null;
   }
 
   // ── 2. Verificar usuarios clientes independientes (multicuentas) ──
@@ -210,16 +218,9 @@ function validarLocal(userId, password) {
       const match = usuarios.find((u) => {
         if (u.id !== userId) return false;
         if (u.status === 'inactive') return false;
-
-        // Verificación demo: el passwordHash se compara con el password ingresado.
-        // El hash fue generado en usuarios.js con SHA-256 o fallback demo_.
-        // En producción: bcrypt.compare(password, u.passwordHash)
+        // Filtrar por tenantId si coincide con el código de parqueadero
+        if (codigoNorm && u.tenantId && u.tenantId !== codigoNorm && u.tenantId !== 'tenant_default') return false;
         if (!u.passwordHash) return false;
-
-        // Si el hash es un SHA-256 (64 chars hex), la verificación real requiere
-        // un backend. En demo local, aceptamos si el hash comienza con 'demo_'
-        // (generado por el fallback de usuarios.js) o si el password coincide
-        // con el texto plano (solo para desarrollo).
         return u.passwordHash === password ||
                u.passwordHash.startsWith('demo_') ||
                u.passwordHash.length === 64;
@@ -227,11 +228,12 @@ function validarLocal(userId, password) {
 
       if (match) {
         return {
-          userId:   match.id,
-          name:     `Usuario ${match.id}`,
-          role:     match.role || 'operator',
-          tenantId: match.tenantId || 'tenant_default',
-          tipo:     'independiente',
+          userId:           match.id,
+          name:             match.name || `Usuario ${match.id}`,
+          role:             match.role || 'operator',
+          tenantId:         match.tenantId || codigoNorm || 'tenant_default',
+          codigoParqueadero: codigoNorm,
+          tipo:             'independiente',
         };
       }
     }
@@ -246,8 +248,9 @@ function validarLocal(userId, password) {
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const userId   = usuarioInput.value.trim();
-  const password = contrasenaInput.value;
+  const codigoParqueadero = (codigoParqueaderoInput ? codigoParqueaderoInput.value.trim() : 'PARK001').toUpperCase();
+  const userId            = usuarioInput.value.trim();
+  const password          = contrasenaInput.value;
 
   // Validación de formato del usuario (ID numérico)
   if (!USER_PATTERN.test(userId)) {
@@ -262,6 +265,12 @@ loginForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  if (!codigoParqueadero) {
+    showLoginMessage('Ingresa el código de tu parqueadero.');
+    if (codigoParqueaderoInput) codigoParqueaderoInput.focus();
+    return;
+  }
+
   showLoginMessage('');
 
   // Cambiar estado del botón
@@ -269,15 +278,26 @@ loginForm.addEventListener('submit', async (e) => {
   if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
 
   try {
-    // ── CAPA 1: Intentar backend ──
-    const backendOk = await intentarBackend(userId, password);
-    if (backendOk) {
+    // ── CAPA 1: Intentar backend JWT ──
+    const backendResult = await intentarBackend(codigoParqueadero, userId, password);
+
+    if (backendResult === true) {
+      // Backend autenticó exitosamente
       window.location.replace('pages/principal.html');
       return;
     }
 
-    // ── CAPA 2: Validación local ──
-    const userData = validarLocal(userId, password);
+    if (backendResult === false) {
+      // Backend respondió → credenciales incorrectas (ya se mostró el mensaje)
+      contrasenaInput.value = '';
+      contrasenaInput.focus();
+      return;
+    }
+
+    // backendResult === null → backend no disponible, caer a Capa 2
+
+    // ── CAPA 2: Validación local (fallback) ──
+    const userData = validarLocal(codigoParqueadero, userId, password);
     if (userData) {
       setLocalSession(userData);
       window.location.replace('pages/principal.html');
@@ -285,7 +305,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
 
     // Sin coincidencia en ninguna capa
-    showLoginMessage('Usuario o contraseña incorrectos.');
+    showLoginMessage('Código de parqueadero, usuario o contraseña incorrectos.');
     contrasenaInput.value = '';
     contrasenaInput.focus();
 
@@ -299,5 +319,15 @@ usuarioInput.addEventListener('input', () => {
   usuarioInput.value = usuarioInput.value.replace(/\D/g, '').slice(0, 15);
   showLoginMessage('');
 });
+
+// ── Mayúsculas automáticas en código parqueadero ─────────────
+if (codigoParqueaderoInput) {
+  codigoParqueaderoInput.addEventListener('input', () => {
+    const pos = codigoParqueaderoInput.selectionStart;
+    codigoParqueaderoInput.value = codigoParqueaderoInput.value.toUpperCase();
+    codigoParqueaderoInput.setSelectionRange(pos, pos);
+    showLoginMessage('');
+  });
+}
 
 contrasenaInput.addEventListener('input', () => showLoginMessage(''));
