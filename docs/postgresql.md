@@ -1,8 +1,9 @@
 # PostgreSQL y cuentas multiempresa
 
-La creación de usuarios se realiza exclusivamente mediante la API y se guarda
-en PostgreSQL. No se usa `localStorage` como respaldo para crear, editar ni
-desactivar cuentas.
+Cuando el backend está activo, la creación de usuarios se realiza mediante la
+API y se guarda en PostgreSQL. Si el proyecto se abre directamente desde el
+archivo HTML, la aplicación conserva las cuentas en el almacenamiento local
+del navegador para que el modo sin servidor siga funcionando.
 
 ## Modelo de acceso
 
