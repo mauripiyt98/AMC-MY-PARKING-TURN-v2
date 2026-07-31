@@ -35,7 +35,7 @@ const cancelDelete         = document.querySelector("#cancelDelete");
 const logoutButton         = document.querySelector("#logoutButton");
 const manageUsersLink      = document.querySelector("#btnGestionUsuarios");
 const welcomeMessage       = document.querySelector("#welcomeMessage");
-const liveChargeList       = document.querySelector("#liveChargeList");
+
 
 // ===== Estado local =====
 let pendingExitIndex = null;
@@ -174,31 +174,19 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-function renderLiveCharges() {
-  if (!liveChargeList) return;
+function updateLiveCharges() {
+  const cells = document.querySelectorAll(".live-charge-cell");
+  if (!cells.length) return;
   const records = MPTStorage.getRecords();
-  if (!records.length) {
-    liveChargeList.innerHTML = '<p class="live-charge-empty">AÚN NO HAY TURNOS ACTIVOS PARA CALCULAR.</p>';
-    return;
-  }
-
   const now = new Date();
-  liveChargeList.innerHTML = records.map((record) => {
-    const { chargedHours, totalCharged } = getExitCharge(record, now);
-    const hoursLabel = `${chargedHours} ${chargedHours === 1 ? 'HORA' : 'HORAS'}`;
-    return `
-      <article class="live-charge-card">
-        <header>
-          <h3>${escapeHtml(record.plate)}</h3>
-          <span>${escapeHtml(record.vehicleType || 'VEHÍCULO')}</span>
-        </header>
-        <p>Tiempo transcurrido: ${hoursLabel}</p>
-        <div class="live-charge-total">
-          <span>VALOR ACTUAL A COBRAR</span>
-          <strong>${formatCurrency(totalCharged)}</strong>
-        </div>
-      </article>`;
-  }).join('');
+  cells.forEach(cell => {
+    const index = Number(cell.dataset.index);
+    const record = records[index];
+    if (record) {
+      const { totalCharged } = getExitCharge(record, now);
+      cell.textContent = formatCurrency(totalCharged);
+    }
+  });
 }
 
 // ============================================================
@@ -288,15 +276,14 @@ function renderRecords() {
     : records.map((record, index) => ({ record, index }));
 
   recordsBody.innerHTML = "";
-  renderLiveCharges();
 
   if (records.length === 0) {
-    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="9">AUN NO HAY TURNOS REGISTRADOS</td></tr>';
+    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="10">AUN NO HAY TURNOS REGISTRADOS</td></tr>';
     return;
   }
 
   if (filteredRecords.length === 0) {
-    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="9">NO HAY TURNOS ACTIVOS PARA ESA PLACA</td></tr>';
+    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="10">NO HAY TURNOS ACTIVOS PARA ESA PLACA</td></tr>';
     return;
   }
 
@@ -310,12 +297,14 @@ function renderRecords() {
       <td>${record.time}</td>
       <td>${record.vehicleType || "SIN DEFINIR"}</td>
       <td>${formatCurrency(hourlyPrice)}</td>
+      <td class="live-charge-cell" data-index="${index}"></td>
       <td>${record.user}</td>
       <td><button class="exit-action" type="button" data-index="${index}">SALIDA</button></td>
       <td><button class="delete-action" type="button" data-type="active" data-index="${index}">ELIMINAR</button></td>
     `;
     recordsBody.appendChild(row);
   });
+  updateLiveCharges();
 }
 
 // ============================================================
@@ -502,7 +491,7 @@ function registerExit(recordIndex) {
 
 function refreshDateTime() {
   entryDateTime.textContent = formatDateTime(new Date());
-  renderLiveCharges();
+  updateLiveCharges();
 }
 
 // ============================================================

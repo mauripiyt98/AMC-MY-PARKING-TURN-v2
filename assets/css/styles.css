@@ -83,12 +83,12 @@ a {
   left: clamp(8px, 2vw, 36px);
   z-index: 90;
   display: grid;
-  width: clamp(130px, 13vw, 196px);
-  gap: 18px;
+  width: clamp(120px, 12vw, 166px);
+  gap: 14px;
   overflow: hidden;
   border: var(--border-strong);
   border-radius: 10px;
-  padding: 32px 14px 24px;
+  padding: 24px 10px 18px;
   color: var(--color-ink);
   background: var(--color-white);
   box-shadow: var(--shadow-panel);
@@ -230,7 +230,7 @@ a {
 }
 
 .records-panel {
-  width: min(96vw, 1140px);
+  width: min(96vw, 1020px);
   margin-top: 26px;
   padding: 42px 18px 26px;
 }
@@ -740,15 +740,16 @@ a {
   text-align: center;
 }
 
-.records-col-ticket { width: 9%; }
-.records-col-plate { width: 9%; }
-.records-col-date { width: 11%; }
-.records-col-time { width: 10%; }
-.records-col-vehicle { width: 9%; }
-.records-col-price { width: 10%; }
-.records-col-user { width: 17%; }
-.records-col-exit { width: 12%; }
-.records-col-delete { width: 13%; }
+.records-col-ticket { width: 8%; }
+.records-col-plate { width: 8%; }
+.records-col-date { width: 10%; }
+.records-col-time { width: 9%; }
+.records-col-vehicle { width: 8%; }
+.records-col-price { width: 9%; }
+.records-col-live-charge { width: 11%; }
+.records-col-user { width: 16%; }
+.records-col-exit { width: 11%; }
+.records-col-delete { width: 10%; }
 
 .records-panel .records-table th,
 .records-panel .records-table td {
@@ -774,133 +775,7 @@ a {
   font-size: 11px;
 }
 
-.live-charge-panel {
-  position: relative;
-  width: min(96vw, 1140px);
-  overflow: hidden;
-  margin-top: 22px;
-  border: var(--border-strong);
-  border-radius: 8px;
-  padding: 32px 22px 22px;
-  background: var(--color-white);
-  box-shadow: var(--shadow-panel);
-}
 
-.live-charge-panel::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 8px;
-  content: "";
-  background: linear-gradient(90deg, var(--color-red-dark), var(--color-red) 52%, var(--color-warning));
-}
-
-.live-charge-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.live-charge-header p {
-  margin: 0 0 4px;
-  color: var(--color-muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.live-charge-header h2 {
-  margin: 0;
-  color: var(--color-red-dark);
-  font-size: 21px;
-  font-weight: 900;
-}
-
-.live-charge-status {
-  padding: 6px 10px;
-  border: 1px solid #86efac;
-  border-radius: 999px;
-  color: #17713a;
-  background: #dcfce7;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.live-charge-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.live-charge-card {
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--color-line);
-  border-left: 5px solid var(--color-warning);
-  border-radius: 8px;
-  padding: 15px;
-  background: linear-gradient(135deg, #ffffff, var(--color-panel));
-}
-
-.live-charge-card header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.live-charge-card h3,
-.live-charge-card p {
-  margin: 0;
-}
-
-.live-charge-card h3 {
-  color: var(--color-red-dark);
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.live-charge-card header span,
-.live-charge-card p {
-  color: var(--color-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.live-charge-total {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed #bfc7d0;
-}
-
-.live-charge-total span {
-  color: var(--color-muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.live-charge-total strong {
-  color: var(--color-red-dark);
-  font-size: 21px;
-  font-weight: 900;
-}
-
-.live-charge-empty {
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 18px;
-  border: 1px dashed #bfc7d0;
-  border-radius: 8px;
-  color: var(--color-muted);
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-}
 
 .records-table tbody tr:nth-child(even) {
   background: #f8fafc;
@@ -1062,15 +937,15 @@ a {
   top: 50%;
   transform: translateY(-50%);
   z-index: 90;
-  width: clamp(130px, 13vw, 196px);
+  width: clamp(120px, 12vw, 166px);
   background: var(--color-white);
   border: var(--border-strong);
   border-radius: 10px;
-  padding: 32px 14px 24px;
+  padding: 24px 10px 18px;
   box-shadow: var(--shadow-panel);
   text-align: center;
   display: grid;
-  gap: 18px;
+  gap: 14px;
   overflow: hidden;
 }
 
