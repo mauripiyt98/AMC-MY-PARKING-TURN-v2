@@ -71,7 +71,9 @@ const PWD_PATTERN  = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 (function initStorage() {
   try {
     const current = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
-    if (!current || !current.passwordHash) {
+    // Compatibilidad: una versión anterior impuso temporalmente Dev@12345.
+    // Se elimina ese valor para conservar la clave local habitual del usuario.
+    if (!current || current.passwordHash === DEFAULT_DEV.passwordHash) {
       localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
         ...current,
         userId:            DEFAULT_DEV.userId,
@@ -79,7 +81,7 @@ const PWD_PATTERN  = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
         role:              DEFAULT_DEV.role,
         email:             DEFAULT_DEV.email,
         codigoParqueadero: DEFAULT_DEV.codigoParqueadero,
-        passwordHash:       DEFAULT_DEV.passwordHash,
+        passwordHash:       null,
       }));
     }
   } catch { /* sin espacio en localStorage */ }
@@ -188,10 +190,20 @@ async function validarLocal(userId, password) {
     try {
       const stored = JSON.parse(localStorage.getItem(MPT_KEYS.devUser) || 'null');
 
-      if (stored && stored.passwordHash) {
-        const isMatch = stored.passwordHash === passwordHash;
+      if (stored) {
+        const isMatch = !stored.passwordHash
+          ? PWD_PATTERN.test(password)
+          : stored.passwordHash === passwordHash;
 
         if (isMatch) {
+          // Tras el primer ingreso compatible, queda vinculada la misma clave
+          // en este navegador para los próximos inicios de sesión.
+          if (!stored.passwordHash) {
+            localStorage.setItem(MPT_KEYS.devUser, JSON.stringify({
+              ...stored,
+              passwordHash,
+            }));
+          }
           return {
             userId:           stored.userId || DEFAULT_DEV.userId,
             name:             stored.name   || DEFAULT_DEV.name,
