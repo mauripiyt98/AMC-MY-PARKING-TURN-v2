@@ -17,12 +17,18 @@
 // SECCION 1 — SESION Y TENANT
 // ============================================================
 
+// ── Claves de sessionStorage (sincronizadas con auth.js y session-guard.js) ──
 const SESSION_KEYS = {
-  user:         "mptUser",
-  userName:     "mptUserName",
-  tenantId:     "mptTenantId",
-  role:         "mptRole",
-  sessionToken: "mptSessionToken",
+  user:         'mptUser',
+  userName:     'mptUserName',
+  tenantId:     'mptTenantId',
+  role:         'mptRole',
+  sessionToken: 'mptSessionToken',
+  // JWT (fase backend)
+  sessionJwt:   'mptSessionV2',
+  userJwt:      'mptUserV2',
+  // Legacy flag (compatibilidad con session-guard.js)
+  sessionLegacy: 'mptSessionActive',
 };
 
 /**
@@ -50,12 +56,14 @@ function getActiveUserRole() {
 
 /**
  * Devuelve true si hay una sesion activa valida.
+ * Acepta tanto sesion JWT (backend) como sesion local.
  */
 function hasActiveSession() {
   const user    = sessionStorage.getItem(SESSION_KEYS.user);
-  const tenant  = sessionStorage.getItem(SESSION_KEYS.tenantId);
   const token   = sessionStorage.getItem(SESSION_KEYS.sessionToken);
-  return !!(user && tenant && token);
+  const legacy  = sessionStorage.getItem(SESSION_KEYS.sessionLegacy);
+  // Sesion local completa O flag legacy activo
+  return !!(user && token) || legacy === 'true';
 }
 
 /**
@@ -68,17 +76,20 @@ function hasActiveSession() {
  * @param {string} sessionData.sessionToken - Token de sesion
  */
 function saveSession(sessionData) {
-  sessionStorage.setItem(SESSION_KEYS.user,         sessionData.user);
-  sessionStorage.setItem(SESSION_KEYS.userName,     sessionData.userName);
-  sessionStorage.setItem(SESSION_KEYS.tenantId,     sessionData.tenantId);
-  sessionStorage.setItem(SESSION_KEYS.role,         sessionData.role);
-  sessionStorage.setItem(SESSION_KEYS.sessionToken, sessionData.sessionToken);
+  sessionStorage.setItem(SESSION_KEYS.user,         sessionData.user || sessionData.userId || '');
+  sessionStorage.setItem(SESSION_KEYS.userName,     sessionData.userName || sessionData.name || '');
+  sessionStorage.setItem(SESSION_KEYS.tenantId,     sessionData.tenantId || 'tenant_default');
+  sessionStorage.setItem(SESSION_KEYS.role,         sessionData.role || 'operator');
+  sessionStorage.setItem(SESSION_KEYS.sessionToken, sessionData.sessionToken || '');
+  // Activar flag legacy para compatibilidad con session-guard.js
+  sessionStorage.setItem(SESSION_KEYS.sessionLegacy, 'true');
 }
 
 /**
  * Elimina todos los datos de sesion (logout).
  */
 function clearSession() {
+  // Limpiar todas las claves de sesion (local + JWT + legacy)
   Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
 }
 

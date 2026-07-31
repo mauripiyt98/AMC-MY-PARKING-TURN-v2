@@ -1,56 +1,136 @@
 // ============================================================
-// session-guard.js — Proteccion de rutas SaaS
-// My Parking Turn v2
+// session-guard.js — Guarda de rutas My Parking Turn v2
 //
-// PROPOSITO:
-//   Incluir este script como PRIMER script en cada pagina
-//   interna. Si no hay sesion valida, redirige inmediatamente
-//   al login antes de que se ejecute cualquier otro codigo.
+// SISTEMA HÍBRIDO: acepta sesiones JWT (backend) y sesiones locales.
+//
+//  Sesión JWT   → token en sessionStorage bajo 'mptSessionV2'
+//  Sesión local → flag 'mptSessionActive' = "true" en sessionStorage
+//
+// Se debe incluir como PRIMER script en CADA página interna.
+// Si no hay sesión válida → redirige al login.
+//
+// MULTICUENTAS:
+//   También inicializa las credenciales por defecto del desarrollador
+//   en localStorage si aún no existen, garantizando que el sistema
+//   funcione en cualquier navegador desde el primer acceso.
 //
 // CUANDO SE INTEGRE EL BACKEND:
-//   Reemplazar la verificacion local por una llamada al
-//   endpoint de validacion de token:
+//   Activar la verificación JWT en isJwtValid().
+//   Agregar validación remota del token contra el endpoint:
 //   GET /api/auth/verify  { Authorization: Bearer <token> }
-//   Si responde 401 → redirigir al login.
 // ============================================================
 
 (function guardSession() {
-  // Determinar la ruta raiz segun la profundidad del archivo actual
-  const depth = (window.location.pathname.match(/\//g) || []).length - 1;
-  const rootPath = depth <= 1 ? "./" : "../".repeat(depth - 1);
+  'use strict';
 
-  /**
-   * Redirige al login eliminando la sesion corrupta si existe.
-   */
-  function redirectToLogin() {
-    // Limpiar sesion corrupta o expirada
-    [
-      "mptUser",
-      "mptUserName",
-      "mptTenantId",
-      "mptRole",
-      "mptSessionToken",
-    ].forEach((key) => sessionStorage.removeItem(key));
+  // ── Claves de sesión ─────────────────────────────────────────
+  var SESSION_KEY_JWT    = 'mptSessionV2';     // JWT (backend futuro)
+  var USER_KEY_JWT       = 'mptUserV2';        // Datos JWT
+  var SESSION_KEY_LEGACY = 'mptSessionActive'; // Sesión local
 
-    // Redirigir a la raiz (index.html)
-    window.location.replace(rootPath + "index.html");
+  // ── Claves de localStorage ──────────────────────────────────
+  var DEV_USER_KEY    = 'mptDeveloperUser';
+  var CLIENT_USERS_KEY = 'mptClientUsers';
+
+  // ── Verificar JWT válido y no expirado ───────────────────────
+  function isJwtValid() {
+    try {
+      var raw = sessionStorage.getItem(SESSION_KEY_JWT);
+      if (!raw) return false;
+      var session = JSON.parse(raw);
+      if (!session || !session.token) return false;
+
+      var parts = session.token.split('.');
+      if (parts.length !== 3) return false;
+
+      var payload = JSON.parse(atob(parts[1]));
+      var now     = Math.floor(Date.now() / 1000);
+      return !!(payload.exp && payload.exp > (now + 30));
+    } catch (e) {
+      return false;
+    }
   }
 
-  const user    = sessionStorage.getItem("mptUser");
-  const tenant  = sessionStorage.getItem("mptTenantId");
-  const token   = sessionStorage.getItem("mptSessionToken");
+  // ── Verificar sesión local activa ───────────────────────────
+  function isLocalSessionActive() {
+    var user  = sessionStorage.getItem('mptUser');
+    var token = sessionStorage.getItem('mptSessionToken');
+    return !!(user && token);
+  }
 
-  // Si falta cualquiera de los tres valores criticos → no autorizado
-  if (!user || !tenant || !token) {
+  // ── Sincronizar datos del usuario desde JWT ──────────────────
+  function syncFromJwt() {
+    try {
+      var raw  = sessionStorage.getItem(USER_KEY_JWT);
+      if (!raw) return;
+      var user = JSON.parse(raw);
+      if (!user) return;
+      if (!sessionStorage.getItem('mptUser') && user.userId) {
+        sessionStorage.setItem('mptUser',     user.userId);
+        sessionStorage.setItem('mptUserName', user.name || '');
+        sessionStorage.setItem('mptRole',     user.role || 'operator');
+        sessionStorage.setItem('mptTenantId', user.tenantId || 'tenant_default');
+      }
+    } catch (e) { /* silencioso */ }
+  }
+
+  // ── Inicializar usuario desarrollador en localStorage ────────
+  // Garantiza que CUALQUIER navegador tenga la base de usuarios
+  // disponible para el modo local (sin backend).
+  function initDefaultDevUser() {
+    try {
+      if (!localStorage.getItem(DEV_USER_KEY)) {
+        localStorage.setItem(DEV_USER_KEY, JSON.stringify({
+          userId:       '1110591592',
+          name:         'USUARIO DESARROLLADOR',
+          role:         'admin',
+          email:        'dev@mpt.com',
+          passwordHash: null,
+          tenantId:     'tenant_default',
+        }));
+      }
+      if (!localStorage.getItem(CLIENT_USERS_KEY)) {
+        localStorage.setItem(CLIENT_USERS_KEY, JSON.stringify([]));
+      }
+    } catch (e) { /* localStorage no disponible */ }
+  }
+
+  // ── Limpiar sesión corrupta y redirigir al login ─────────────
+  function redirectToLogin() {
+    var depth    = (window.location.pathname.match(/\//g) || []).length - 1;
+    var rootPath = depth <= 1 ? './' : '../'.repeat(depth - 1);
+
+    [
+      'mptUser', 'mptUserName', 'mptTenantId',
+      'mptRole', 'mptSessionToken',
+      SESSION_KEY_JWT, USER_KEY_JWT, SESSION_KEY_LEGACY,
+    ].forEach(function (key) { sessionStorage.removeItem(key); });
+
+    window.location.replace(rootPath + 'index.html');
+  }
+
+  // ── Determinar estado de sesión ──────────────────────────────
+  var jwtOk      = isJwtValid();
+  var localOk    = isLocalSessionActive();
+  var isLoggedIn = jwtOk || localOk;
+
+  // Sincronizar datos si hay JWT activo
+  if (jwtOk) syncFromJwt();
+
+  // Siempre inicializar credenciales por defecto
+  initDefaultDevUser();
+
+  // ── Redirigir si no está autenticado ─────────────────────────
+  if (!isLoggedIn) {
     redirectToLogin();
     return;
   }
 
-  // TODO (fase backend): validar el token contra la API antes de continuar
+  // TODO (fase backend): validar el token remotamente antes de continuar
   // fetch('/api/auth/verify', {
-  //   headers: { Authorization: `Bearer ${token}` }
-  // }).then(res => {
+  //   headers: { Authorization: 'Bearer ' + sessionStorage.getItem('mptSessionToken') }
+  // }).then(function (res) {
   //   if (!res.ok) redirectToLogin();
-  // }).catch(() => redirectToLogin());
+  // }).catch(function () { redirectToLogin(); });
 
 })();
