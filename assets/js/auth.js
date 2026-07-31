@@ -53,7 +53,7 @@ const DEFAULT_DEV = {
 };
 
 // ── URL del backend ────────────────────────────────────────────
-const API_BASE = 'http://localhost:3000/api';
+const AUTH_API_BASE = 'http://localhost:3000/api';
 
 // ─────────────────────────────────────────────────────────────
 
@@ -141,7 +141,7 @@ async function intentarBackend(documento, password) {
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 4000);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login`, {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ documento, password }),

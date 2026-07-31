@@ -2,7 +2,7 @@
 
 // Gestión multi-cuenta. El SUPERADMIN crea un parqueadero con su ADMIN
 // inicial; cada ADMIN solamente administra los usuarios de su tenant.
-const API_BASE = 'http://localhost:3000/api';
+const USERS_API_BASE = 'http://localhost:3000/api';
 const PASSWORD_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const DOCUMENT_RE = /^\d{5,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,7 +52,7 @@ function token() {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${USERS_API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
