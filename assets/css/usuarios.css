@@ -894,6 +894,80 @@
   to   { transform: translateY(0);    opacity: 1; }
 }
 
+/* Cuenta principal, independiente de los usuarios de clientes. */
+.usr-principal-account {
+  display: grid;
+  grid-template-columns: auto minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin: 24px 32px 0;
+  padding: 20px 24px;
+  border: 1px solid rgba(251, 191, 36, 0.38);
+  border-radius: var(--usr-radius-lg);
+  background: linear-gradient(120deg, rgba(146, 64, 14, 0.28), rgba(30, 27, 75, 0.72));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.usr-principal-account[hidden] { display: none; }
+
+.usr-principal-account__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.16);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fbbf24;
+  font-size: 22px;
+}
+
+.usr-principal-account__eyebrow {
+  margin: 0 0 3px;
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.usr-principal-account h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.usr-principal-account__description {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.usr-principal-account__data {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 18px;
+  margin: 0;
+}
+
+.usr-principal-account__data div { min-width: 118px; }
+.usr-principal-account__data dt {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+.usr-principal-account__data dd {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.usr-principal-account__status { color: #4ade80; }
+
 /* ================================================================
    RESPONSIVE
    ================================================================ */
@@ -917,6 +991,17 @@
 
   .usr-stats-row {
     padding: 16px 16px 0;
+  }
+
+  .usr-principal-account {
+    grid-template-columns: auto 1fr;
+    margin: 16px 16px 0;
+    padding: 18px;
+  }
+
+  .usr-principal-account__data {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 
   .usr-main-layout {

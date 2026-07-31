@@ -28,6 +28,9 @@ const deleteModal = document.getElementById('deleteUserModal');
 const deleteText = document.getElementById('deleteUserModalText');
 const toggleModal = document.getElementById('toggleStatusModal');
 const toggleText = document.getElementById('toggleStatusModalText');
+const principalAccountPanel = document.getElementById('principalAccountPanel');
+const principalDevDocument = document.getElementById('principalDevDocument');
+const principalDevEmail = document.getElementById('principalDevEmail');
 
 let users = [];
 let pendingId = null;
@@ -116,6 +119,19 @@ function showToast(message, type = 'success') {
   toast.hidden = false;
   toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
 }
+
+function renderPrincipalAccount() {
+  if (!principalAccountPanel) return;
+  if (!isSuperadmin()) {
+    principalAccountPanel.hidden = true;
+    return;
+  }
+
+  const developer = MPTStorage.getDeveloperUser();
+  principalDevDocument.textContent = developer?.userId || sessionStorage.getItem('mptUser') || '—';
+  principalDevEmail.textContent = developer?.email || 'Correo no configurado';
+  principalAccountPanel.hidden = false;
+}
 function escapeHtml(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -181,6 +197,7 @@ function configureScreen() {
   } else {
     form.innerHTML = '<p class="usr-form-message msg-error">No tienes permisos para administrar usuarios.</p>';
   }
+  renderPrincipalAccount();
 }
 
 function validateForm() {
@@ -232,8 +249,15 @@ form.addEventListener('submit', async (event) => {
       const tenantId = isSuperadmin()
         ? fields.parkingCode.value.trim().toUpperCase()
         : MPTStorage.getActiveTenantId();
+      const tenants = MPTStorage.getTenants();
       if (all.some((user) => user.id === fields.document.value.trim())) {
         throw new Error('Ese documento ya está registrado en el sistema.');
+      }
+      if (isSuperadmin() && (
+        tenants.some((tenant) => tenant.id === tenantId) ||
+        all.some((user) => user.tenantId === tenantId)
+      )) {
+        throw new Error(`El espacio ${tenantId} ya existe. Usa un código de parqueadero diferente.`);
       }
       all.push({
         id: fields.document.value.trim(),
@@ -244,8 +268,20 @@ form.addEventListener('submit', async (event) => {
         status: 'active',
         tenantId,
         createdAt: new Date().toISOString(),
+        createdBy: sessionStorage.getItem('mptUser') || 'desarrollador',
       });
       MPTStorage.saveUsers(all);
+      if (isSuperadmin()) {
+        tenants.push({
+          id: tenantId,
+          codigo: tenantId,
+          nombre: fields.parkingName.value.trim(),
+          adminDocumento: fields.document.value.trim(),
+          activo: true,
+          creadoEn: new Date().toISOString(),
+        });
+        MPTStorage.saveTenants(tenants);
+      }
       showToast(isSuperadmin() ? `Cuenta ${tenantId} creada y guardada localmente.` : 'Usuario creado y guardado localmente.', 'success');
     }
     form.reset();

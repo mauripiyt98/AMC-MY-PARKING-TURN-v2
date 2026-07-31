@@ -210,6 +210,7 @@ const KEYS = {
   monthlyTicket:   "mptNextMonthlyTicket",
   // SECCIÓN 6: Usuarios clientes finales (multicuentas)
   clientUsers:     "mptClientUsers",
+  tenants:         "mptTenants",
 };
 
 function getRecords() {
@@ -317,6 +318,31 @@ function saveUsers(users) {
   localStorage.setItem(KEYS.clientUsers, JSON.stringify(users));
 }
 
+/** Retorna los espacios independientes registrados en modo local. */
+function getTenants() {
+  try {
+    const raw = localStorage.getItem(KEYS.tenants);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Persiste el registro de espacios independientes en modo local. */
+function saveTenants(tenants) {
+  localStorage.setItem(KEYS.tenants, JSON.stringify(tenants));
+}
+
+/** Retorna la cuenta principal, separada de los usuarios de clientes. */
+function getDeveloperUser() {
+  try {
+    const raw = localStorage.getItem('mptDeveloperUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Busca un usuario por su ID de documento.
  * @param {string} id
@@ -371,6 +397,9 @@ window.MPTStorage = {
   // Usuarios clientes finales (MULTICUENTAS - preparado)
   getUsers,
   saveUsers,
+  getTenants,
+  saveTenants,
+  getDeveloperUser,
   findUserById,
   findUserByEmail,
 };
