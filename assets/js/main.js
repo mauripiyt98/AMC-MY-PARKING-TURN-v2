@@ -175,16 +175,20 @@ function escapeHtml(value) {
 }
 
 function updateLiveCharges() {
-  const cells = document.querySelectorAll(".live-charge-cell");
-  if (!cells.length) return;
+  const chargeCells = document.querySelectorAll(".live-charge-cell");
+  const hoursCells  = document.querySelectorAll(".live-hours-cell");
+  if (!chargeCells.length) return;
   const records = MPTStorage.getRecords();
   const now = new Date();
-  cells.forEach(cell => {
+  chargeCells.forEach((cell, i) => {
     const index = Number(cell.dataset.index);
     const record = records[index];
     if (record) {
-      const { totalCharged } = getExitCharge(record, now);
+      const { chargedHours, totalCharged } = getExitCharge(record, now);
       cell.textContent = formatCurrency(totalCharged);
+      if (hoursCells[i]) {
+        hoursCells[i].textContent = chargedHours;
+      }
     }
   });
 }
@@ -298,6 +302,7 @@ function renderRecords() {
       <td>${record.vehicleType || "SIN DEFINIR"}</td>
       <td>${formatCurrency(hourlyPrice)}</td>
       <td class="live-charge-cell" data-index="${index}"></td>
+      <td class="live-hours-cell" data-index="${index}"></td>
       <td>${record.user}</td>
       <td><button class="exit-action" type="button" data-index="${index}">SALIDA</button></td>
       <td><button class="delete-action" type="button" data-type="active" data-index="${index}">ELIMINAR</button></td>
@@ -406,7 +411,9 @@ function openExitModal(recordIndex) {
   const charge = getExitCharge(record, new Date());
 
   pendingExitIndex = recordIndex;
-  exitModalText.textContent = `Placa ${record.plate} | Total a cobrar: ${formatCurrency(charge.totalCharged)}`;
+  exitModalText.textContent = `Placa ${record.plate} | Total a cobrar: ${formatCurrency(charge.totalCharged)} | Horas activo: ${charge.chargedHours}`;
+  const customInput = document.querySelector("#customChargeInput");
+  if (customInput) customInput.value = "";
   exitModal.hidden = false;
   confirmExit.focus();
 }
@@ -444,7 +451,7 @@ function closeChargeModal() {
 // REGISTRAR SALIDA
 // ============================================================
 
-function registerExit(recordIndex) {
+function registerExit(recordIndex, customCharge = null) {
   const records = MPTStorage.getRecords();
   const record  = records[recordIndex];
 
@@ -454,14 +461,19 @@ function registerExit(recordIndex) {
 
   const now      = new Date();
   const exitTime = formatTime(now);
-  const { chargedHours, hourlyPrice, totalCharged } = getExitCharge(record, now);
+  const { chargedHours, hourlyPrice, totalCharged: calculatedTotal } = getExitCharge(record, now);
   const history  = MPTStorage.getHistory();
+  
+  const finalTotalCharged = (customCharge !== null && customCharge >= 0) ? customCharge : calculatedTotal;
+  const originalTotalCharged = calculatedTotal;
+
   const chargeReceipt = {
     plate:      record.plate,
     date:       record.date,
     entryTime:  record.time,
     exitTime,
-    totalCharged,
+    totalCharged: finalTotalCharged,
+    originalTotalCharged
   };
 
   history.unshift({
@@ -474,14 +486,15 @@ function registerExit(recordIndex) {
     date:         record.date,
     hourlyPrice,
     chargedHours,
-    totalCharged,
+    totalCharged: finalTotalCharged,
+    originalTotalCharged
   });
 
   records.splice(recordIndex, 1);
   MPTStorage.saveRecords(records);
   MPTStorage.saveHistory(history);
   renderRecords();
-  plateMessage.textContent = `Salida generada para ${record.plate}. Total cobrado: ${formatCurrency(totalCharged)}.`;
+  plateMessage.textContent = `Salida generada para ${record.plate}. Total cobrado: ${formatCurrency(finalTotalCharged)}.`;
   return chargeReceipt;
 }
 
@@ -541,7 +554,16 @@ confirmExit.addEventListener("click", () => {
     return;
   }
 
-  const chargeReceipt = registerExit(pendingExitIndex);
+  const customInput = document.querySelector("#customChargeInput");
+  let customCharge = null;
+  if (customInput && customInput.value !== "") {
+    const val = Number(customInput.value);
+    if (val >= 0) {
+      customCharge = val;
+    }
+  }
+
+  const chargeReceipt = registerExit(pendingExitIndex, customCharge);
   closeExitModal();
 
   if (chargeReceipt) {

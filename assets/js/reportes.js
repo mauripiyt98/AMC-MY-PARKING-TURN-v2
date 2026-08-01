@@ -250,6 +250,12 @@ function renderMonthlyTable(group) {
     .map((record) => {
       const hourlyPrice  = Number(record.hourlyPrice || 0);
       const totalCharged = Number(record.totalCharged || 0);
+      const originalTotal = record.originalTotalCharged !== undefined ? Number(record.originalTotalCharged) : totalCharged;
+      
+      let displayTotal = formatCurrency(totalCharged);
+      if (originalTotal !== totalCharged) {
+        displayTotal += `<br><small style="color:var(--color-muted); font-size:10px;">Orig: ${formatCurrency(originalTotal)}</small>`;
+      }
 
       return `
         <tr>
@@ -259,7 +265,7 @@ function renderMonthlyTable(group) {
           <td>${record.exitTime || "SIN DATO"}</td>
           <td>${formatDateForDisplay(record.reportDate)}</td>
           <td>${formatCurrency(hourlyPrice)}</td>
-          <td>${formatCurrency(totalCharged)}</td>
+          <td>${displayTotal}</td>
           <td><button class="delete-action" type="button" data-index="${record.originalIndex}">ELIMINAR</button></td>
         </tr>
       `;

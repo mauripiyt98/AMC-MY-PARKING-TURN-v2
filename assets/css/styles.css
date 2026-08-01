@@ -741,14 +741,15 @@ a {
 }
 
 .records-col-ticket { width: 8%; }
-.records-col-plate { width: 8%; }
-.records-col-date { width: 10%; }
-.records-col-time { width: 9%; }
+.records-col-plate { width: 7%; }
+.records-col-date { width: 9%; }
+.records-col-time { width: 8%; }
 .records-col-vehicle { width: 8%; }
-.records-col-price { width: 9%; }
-.records-col-live-charge { width: 11%; }
-.records-col-user { width: 16%; }
-.records-col-exit { width: 11%; }
+.records-col-price { width: 8%; }
+.records-col-live-charge { width: 9%; }
+.records-col-hours { width: 6%; }
+.records-col-user { width: 17%; }
+.records-col-exit { width: 10%; }
 .records-col-delete { width: 10%; }
 
 .records-panel .records-table th,
