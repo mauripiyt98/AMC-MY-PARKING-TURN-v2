@@ -53,6 +53,22 @@ class Usuario {
   }
 
   /**
+   * Listado global para el SUPERADMIN. Se ejecuta con contexto interno de
+   * autenticacion, nunca con datos aportados por el navegador.
+   */
+  static async findAllForSuperadmin(client) {
+    const { rows } = await client.query(`
+      SELECT u.id, u.parqueadero_id, u.nombre, u.documento, u.email, u.rol,
+             u.activo, u.ultimo_acceso, u.creado_en, u.actualizado_en,
+             p.codigo AS parqueadero_codigo, p.nombre AS parqueadero_nombre
+      FROM usuarios u
+      JOIN parqueaderos p ON p.id = u.parqueadero_id
+      ORDER BY u.creado_en DESC, u.nombre ASC
+    `);
+    return rows;
+  }
+
+  /**
    * Crear nuevo usuario en un parqueadero.
    */
   static async create(client, parqueaderoId, data) {
@@ -93,6 +109,31 @@ class Usuario {
     return rows[0] || null;
   }
 
+  /** Actualiza una cuenta de cualquier tenant, solo para SUPERADMIN. */
+  static async updateAny(client, id, data) {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    const allowed = ['nombre', 'email', 'rol', 'activo', 'password_hash'];
+
+    for (const key of allowed) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = $${idx++}`);
+        values.push(data[key]);
+      }
+    }
+    if (!fields.length) return null;
+
+    values.push(id);
+    const { rows } = await client.query(
+      `UPDATE usuarios SET ${fields.join(', ')}
+       WHERE id = $${idx}
+       RETURNING id, parqueadero_id, nombre, documento, email, rol, activo, actualizado_en`,
+      values
+    );
+    return rows[0] || null;
+  }
+
   /**
    * Actualizar timestamp de último acceso.
    */
@@ -112,6 +153,15 @@ class Usuario {
        WHERE id = $1 AND parqueadero_id = $2
        RETURNING id`,
       [id, parqueaderoId]
+    );
+    return rows[0] || null;
+  }
+
+  /** Desactiva una cuenta de cualquier tenant, solo para SUPERADMIN. */
+  static async deactivateAny(client, id) {
+    const { rows } = await client.query(
+      `UPDATE usuarios SET activo = FALSE WHERE id = $1 RETURNING id, parqueadero_id`,
+      [id]
     );
     return rows[0] || null;
   }

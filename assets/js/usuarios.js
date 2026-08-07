@@ -5,6 +5,8 @@ const USERS_API_BASE = window.MPT_API_BASE || '/api';
 const PASSWORD_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const DOCUMENT_RE = /^\d{5,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOW_LOCAL_FALLBACK = window.location.protocol === 'file:' ||
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const form = document.getElementById('userForm');
 const fields = {
@@ -82,6 +84,7 @@ function mapApiUser(user) {
     rol: (user.rol || 'OPERADOR').toLowerCase(),
     activo: Boolean(user.activo),
     creado_en: user.creado_en,
+    parqueadero: user.parqueadero_nombre || user.parqueadero_codigo || '',
     local: false,
   };
 }
@@ -95,6 +98,7 @@ function mapLocalUser(user) {
     rol: user.role || 'operator',
     activo: user.status !== 'inactive',
     creado_en: user.createdAt,
+    parqueadero: user.tenantId || '',
     local: true,
   };
 }
@@ -154,7 +158,7 @@ function render() {
   tableBody.innerHTML = visible.map((user, index) => `
     <tr>
       <td>${index + 1}</td>
-      <td><span class="usr-id-cell">${escapeHtml(user.documento)}</span><br><small>${escapeHtml(user.nombre)}</small></td>
+      <td><span class="usr-id-cell">${escapeHtml(user.documento)}</span><br><small>${escapeHtml(user.nombre)}</small>${user.parqueadero ? `<br><small>Parqueadero: ${escapeHtml(user.parqueadero)}</small>` : ''}</td>
       <td><span class="usr-email-cell">${escapeHtml(user.email || '—')}</span></td>
       <td><span class="usr-badge ${user.rol === 'admin' ? 'usr-badge-admin' : 'usr-badge-operator'}">${user.rol === 'admin' ? '★ ADMIN' : 'OPERADOR'}</span></td>
       <td><span class="usr-badge ${user.activo ? 'usr-badge-active' : 'usr-badge-inactive'}">${user.activo ? '● ACTIVO' : '○ INACTIVO'}</span></td>
@@ -168,6 +172,12 @@ function render() {
 
 async function loadUsers() {
   try {
+    if (!isBackendSession() && !ALLOW_LOCAL_FALLBACK) {
+      users = [];
+      render();
+      showToast('La sesion no esta conectada a PostgreSQL. Cierra sesion e ingresa nuevamente.', 'error');
+      return;
+    }
     users = isBackendSession()
       ? (await request('/usuarios')).usuarios.map(mapApiUser)
       : localUsers().map(mapLocalUser);
@@ -238,6 +248,9 @@ form.addEventListener('submit', async (event) => {
         showToast('Usuario creado para este parqueadero.', 'success');
       }
     } else {
+      if (!ALLOW_LOCAL_FALLBACK) {
+        throw new Error('No hay una sesion conectada a PostgreSQL. Cierra sesion e ingresa nuevamente.');
+      }
       const all = MPTStorage.getUsers();
       const tenantId = isSuperadmin()
         ? fields.parkingCode.value.trim().toUpperCase()
@@ -298,6 +311,9 @@ tableBody.addEventListener('click', (event) => {
     document.getElementById('toggleStatusModalTitle').textContent = user.activo ? 'DESACTIVAR USUARIO' : 'ACTIVAR USUARIO';
     toggleText.textContent = `¿Cambiar el estado de ${user.documento}?`;
     toggleModal.hidden = false;
+    toggleText.textContent = user.activo
+      ? `Desactivar a ${user.documento}? Al iniciar sesion vera: "COMUNICARSE CON PROVEEDOR TECNOLOGICO PARA ACTIVACION DE SU CUENTA".`
+      : `Activar a ${user.documento}? Podra iniciar sesion normalmente.`;
   } else {
     deleteText.textContent = `¿Desactivar al usuario ${user.documento}? Ya no podrá iniciar sesión.`;
     deleteModal.hidden = false;

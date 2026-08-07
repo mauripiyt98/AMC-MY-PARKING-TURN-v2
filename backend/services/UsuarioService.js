@@ -45,7 +45,7 @@ class UsuarioService {
 
     if (!usuario) throw new UnauthorizedError('Usuario o contraseña incorrectos');
     if (!usuario.parqueadero_activo) throw new UnauthorizedError('El parqueadero está desactivado. Contacte al administrador.');
-    if (!usuario.activo) throw new UnauthorizedError('Usuario desactivado. Contacte al administrador.');
+    if (!usuario.activo) throw new UnauthorizedError('COMUNICARSE CON PROVEEDOR TECNOLOGICO PARA ACTIVACION DE SU CUENTA');
 
     // 3. Verificar contraseña con bcrypt
     const ok = await comparePassword(password, usuario.password_hash);

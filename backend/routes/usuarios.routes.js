@@ -19,6 +19,12 @@ router.use(authMiddleware, tenantMiddleware);
 // ── GET /api/usuarios  — Listar usuarios del parqueadero ──────────────────────
 router.get('/', requireRole('SUPERADMIN'), async (req, res, next) => {
   try {
+    // El desarrollador administra todos los parqueaderos. Su token pertenece
+    // a un tenant tecnico, por eso este listado usa el contexto interno RLS.
+    if (req.user.rol === 'SUPERADMIN') {
+      const usuarios = await withAuthContext((client) => Usuario.findAllForSuperadmin(client));
+      return res.json({ success: true, usuarios });
+    }
     const soloActivos = req.query.activos === 'true';
     const usuarios = await Usuario.findAll(req.dbClient, req.parqueaderoId, { soloActivos });
     res.json({ success: true, usuarios });
@@ -113,13 +119,21 @@ router.patch('/:id',
         updates.password_hash = await hashPassword(password);
       }
 
-      const usuario = await Usuario.update(req.dbClient, req.parqueaderoId, req.params.id, updates);
+      if (updates.activo === false && req.params.id === String(req.user.id)) {
+        throw new ValidationError('No puedes desactivar tu propio usuario');
+      }
+
+      const usuario = req.user.rol === 'SUPERADMIN'
+        ? await withAuthContext((client) => Usuario.updateAny(client, req.params.id, updates))
+        : await Usuario.update(req.dbClient, req.parqueaderoId, req.params.id, updates);
       if (!usuario) throw new NotFoundError('Usuario');
       if (updates.activo === false) {
-        await req.dbClient.query(
+        const revokeSessions = (client) => client.query(
           'UPDATE sesiones_jwt SET revocado = TRUE WHERE usuario_id = $1 AND parqueadero_id = $2',
-          [usuario.id, req.parqueaderoId]
+          [usuario.id, usuario.parqueadero_id]
         );
+        if (req.user.rol === 'SUPERADMIN') await withAuthContext(revokeSessions);
+        else await revokeSessions(req.dbClient);
       }
       res.json({ success: true, usuario });
     } catch (err) {
@@ -135,12 +149,16 @@ router.delete('/:id', requireRole('SUPERADMIN'), async (req, res, next) => {
     if (req.params.id === String(req.user.id)) {
       throw new ValidationError('No puedes desactivar tu propio usuario');
     }
-    const usuario = await Usuario.deactivate(req.dbClient, req.parqueaderoId, req.params.id);
+    const usuario = req.user.rol === 'SUPERADMIN'
+      ? await withAuthContext((client) => Usuario.deactivateAny(client, req.params.id))
+      : await Usuario.deactivate(req.dbClient, req.parqueaderoId, req.params.id);
     if (!usuario) throw new NotFoundError('Usuario');
-    await req.dbClient.query(
+    const revokeSessions = (client) => client.query(
       'UPDATE sesiones_jwt SET revocado = TRUE WHERE usuario_id = $1 AND parqueadero_id = $2',
-      [usuario.id, req.parqueaderoId]
+      [usuario.id, usuario.parqueadero_id]
     );
+    if (req.user.rol === 'SUPERADMIN') await withAuthContext(revokeSessions);
+    else await revokeSessions(req.dbClient);
     res.json({ success: true, message: 'Usuario desactivado correctamente' });
   } catch (err) {
     next(err);

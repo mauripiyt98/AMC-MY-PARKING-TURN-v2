@@ -56,6 +56,8 @@ const DEFAULT_DEV = {
 // Por defecto la API se atiende desde este mismo host. Si frontend y API se
 // alojan separados, se puede definir window.MPT_API_BASE antes de este script.
 const AUTH_API_BASE = window.MPT_API_BASE || '/api';
+const ALLOW_LOCAL_FALLBACK = window.location.protocol === 'file:' ||
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 // ─────────────────────────────────────────────────────────────
 
@@ -290,6 +292,11 @@ loginForm.addEventListener('submit', async (e) => {
     // backendResult === null → backend no disponible, caer a Capa 2
 
     // ── CAPA 2: Validación local (fallback) ──
+    if (!ALLOW_LOCAL_FALLBACK) {
+      showLoginMessage('No fue posible conectar con el servidor. Intenta nuevamente o comunicate con el proveedor tecnologico.');
+      return;
+    }
+
     const userData = await validarLocal(userId, password);
     if (userData) {
       setLocalSession(userData);
