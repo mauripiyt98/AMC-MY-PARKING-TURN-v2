@@ -6,6 +6,7 @@ const express      = require('express');
 const helmet       = require('helmet');
 const cors         = require('cors');
 const rateLimit    = require('express-rate-limit');
+const path         = require('path');
 
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
@@ -16,6 +17,8 @@ const parqueaderosRoutes = require('./routes/parqueaderos.routes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+if (process.env.TRUST_PROXY !== 'false') app.set('trust proxy', 1);
 
 // ── Seguridad HTTP headers ───────────────────────────
 app.use(helmet());
@@ -30,6 +33,7 @@ const allowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:3000',
 ];
+const hasConfiguredCorsOrigins = Boolean(process.env.CORS_ORIGIN);
 
 app.use(cors({
   origin(origin, callback) {
@@ -45,7 +49,7 @@ app.use(cors({
         return callback(null, true);
       }
     }
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (!hasConfiguredCorsOrigins || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origen no permitido — ${origin}`));
   },
   credentials   : true,
@@ -89,6 +93,27 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth',         authRoutes);
 app.use('/api/usuarios',     usuariosRoutes);
 app.use('/api/parqueaderos', parqueaderosRoutes);
+
+app.get('/api/health/db', async (_req, res) => {
+  try {
+    await testConnection();
+    res.json({ status: 'ok', database: 'connected' });
+  } catch (err) {
+    console.error('[Health] PostgreSQL no disponible:', err.message);
+    res.status(503).json({
+      status: 'error',
+      code: 'DATABASE_UNAVAILABLE',
+      message: 'No fue posible conectar con PostgreSQL.',
+    });
+  }
+});
+
+// Sirve solamente los archivos publicos: frontend y API comparten origen.
+const frontendDir = path.join(__dirname, '..');
+app.use('/assets', express.static(path.join(frontendDir, 'assets')));
+app.use('/pages', express.static(path.join(frontendDir, 'pages')));
+app.get(['/', '/index.html'], (_req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
+app.get('/LOGOMPT.png', (_req, res) => res.sendFile(path.join(frontendDir, 'LOGOMPT.png')));
 
 // ── Manejo de rutas no encontradas y errores ─────────
 app.use(notFound);

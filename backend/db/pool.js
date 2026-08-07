@@ -2,6 +2,7 @@
 
 require('dotenv').config();
 const { Pool } = require('pg');
+const { getDbConfig } = require('./config');
 
 /**
  * ══════════════════════════════════════════════════════════════
@@ -12,15 +13,10 @@ const { Pool } = require('pg');
  * Para mayor escala → añadir PgBouncer en modo transaction pooling.
  */
 const pool = new Pool({
-  host    : process.env.DB_HOST     || 'localhost',
-  port    : Number(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME     || 'mpt_parking',
-  user    : process.env.DB_USER     || 'mpt_app',
-  password: process.env.DB_PASSWORD || '',
+  ...getDbConfig(),
   max     : Number(process.env.DB_MAX_CONNECTIONS)         || 20,
   idleTimeoutMillis      : Number(process.env.DB_IDLE_TIMEOUT_MS)       || 30000,
   connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS) || 2000,
-  ssl     : process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 // Evitar crash del proceso en errores de conexiones idle

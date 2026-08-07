@@ -8,13 +8,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Rol de aplicación  (el backend se conecta con este rol)
 -- ─────────────────────────────────────────────────────────────────────────────
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mpt_app') THEN
-        CREATE ROLE mpt_app LOGIN PASSWORD 'CAMBIAR_EN_PRODUCCION';
-    END IF;
-END
-$$;
+-- El usuario de conexion lo entrega DATABASE_URL. No se crea un rol fijo
+-- porque PostgreSQL administrado normalmente no permite CREATE ROLE.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Habilitar RLS en todas las tablas operativas
@@ -49,7 +44,7 @@ DROP POLICY IF EXISTS tenant_isolation ON usuarios;
 CREATE POLICY tenant_isolation ON usuarios
     AS PERMISSIVE
     FOR ALL
-    TO mpt_app
+    TO PUBLIC
     USING       (parqueadero_id = current_parqueadero_id())
     WITH CHECK  (parqueadero_id = current_parqueadero_id());
 
@@ -58,25 +53,19 @@ DROP POLICY IF EXISTS tenant_isolation ON sesiones_jwt;
 CREATE POLICY tenant_isolation ON sesiones_jwt
     AS PERMISSIVE
     FOR ALL
-    TO mpt_app
+    TO PUBLIC
     USING       (parqueadero_id = current_parqueadero_id())
     WITH CHECK  (parqueadero_id = current_parqueadero_id());
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. Permisos al rol mpt_app
 -- ─────────────────────────────────────────────────────────────────────────────
-GRANT USAGE ON SCHEMA public TO mpt_app;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON
-    parqueaderos, usuarios, sesiones_jwt, migrations_log
-TO mpt_app;
 
 -- parqueaderos: mpt_app solo puede leer y actualizar su propio parqueadero
 -- (crear parqueaderos requiere superuser — lo hace el seed o el panel de admin)
-REVOKE DELETE ON parqueaderos FROM mpt_app;
 
 -- Secuencias
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO mpt_app;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Función de auditoría: actualizar automáticamente actualizado_en

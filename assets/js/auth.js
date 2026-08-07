@@ -53,7 +53,9 @@ const DEFAULT_DEV = {
 };
 
 // ── URL del backend ────────────────────────────────────────────
-const AUTH_API_BASE = 'http://localhost:3000/api';
+// Por defecto la API se atiende desde este mismo host. Si frontend y API se
+// alojan separados, se puede definir window.MPT_API_BASE antes de este script.
+const AUTH_API_BASE = window.MPT_API_BASE || '/api';
 
 // ─────────────────────────────────────────────────────────────
 
@@ -149,7 +151,9 @@ async function intentarBackend(documento, password) {
     });
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      message: 'La respuesta del servidor no es valida. Verifica la URL de la API.',
+    }));
 
     if (response.ok && data.success) {
       setJwtSession(data);

@@ -27,6 +27,16 @@ del navegador para que el modo sin servidor siga funcionando.
 - Aislamiento multiempresa con PostgreSQL Row Level Security (RLS), contexto de
   tenant por transacción y consultas que incluyen `parqueadero_id`.
 
+## Despliegue en un host
+
+El backend publica el frontend y la API desde el mismo dominio. Por eso el
+navegador usa la ruta relativa `/api`, sin depender de `localhost`.
+
+En un servicio de PostgreSQL administrado use `DATABASE_URL` y `DB_SSL=true`.
+Solo defina `CORS_ORIGIN` cuando el frontend se publique en un dominio distinto.
+Despues de desplegar, abra `/api/health/db`: debe responder
+`{"status":"ok","database":"connected"}` antes de probar el inicio de sesion.
+
 ## Puesta en marcha
 
 1. Instale PostgreSQL 15+ y Node.js 18+.

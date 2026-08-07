@@ -1,5 +1,5 @@
--- MIGRACIÓN 003 — Contextos internos de autenticación para RLS.
--- El backend los establece dentro de transacciones; nunca vienen del navegador.
+-- MIGRACION 006 - Permite usar el usuario administrado de DATABASE_URL.
+-- Conserva el aislamiento tenant y los contextos internos de autenticacion.
 
 DROP POLICY IF EXISTS tenant_isolation ON usuarios;
 CREATE POLICY tenant_isolation ON usuarios
@@ -25,5 +25,5 @@ CREATE POLICY tenant_isolation ON sesiones_jwt
         OR current_setting('app.request_context', TRUE) = 'auth'
     );
 
-INSERT INTO migrations_log (filename) VALUES ('003_auth_context_rls.sql')
+INSERT INTO migrations_log (filename) VALUES ('006_hosted_database_rls.sql')
 ON CONFLICT (filename) DO NOTHING;

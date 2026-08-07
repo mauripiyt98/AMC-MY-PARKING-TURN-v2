@@ -1,6 +1,6 @@
 'use strict';
 
-const PROFILE_API_BASE = 'http://localhost:3000/api';
+const PROFILE_API_BASE = window.MPT_API_BASE || '/api';
 const profileForm = document.getElementById('parkingProfileForm');
 const profileMessage = document.getElementById('profileMessage');
 const profileFields = {

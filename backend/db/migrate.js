@@ -4,6 +4,7 @@ require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const { getDbConfig } = require('./config');
 
 /**
  * ══════════════════════════════════════════════════════════════
@@ -24,14 +25,7 @@ const { Pool } = require('pg');
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 // Pool con usuario superadmin para las migraciones
-const pool = new Pool({
-  host    : process.env.DB_HOST        || 'localhost',
-  port    : Number(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME        || 'mpt_parking',
-  user    : process.env.DB_SUPERUSER   || 'postgres',
-  password: process.env.DB_SUPERPASSWORD || '',
-  ssl     : false,
-});
+const pool = new Pool(getDbConfig({ admin: true }));
 
 async function migrate() {
   const client = await pool.connect();

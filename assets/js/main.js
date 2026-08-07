@@ -110,7 +110,7 @@ async function syncConfiguredPricesFromServer() {
   try {
     const tenantId = MPTStorage.getActiveTenantId();
     const token = MPTStorage.getSessionToken();
-    const response = await fetch(`http://localhost:3000/api/parqueaderos/${tenantId}`, {
+    const response = await fetch(`${window.MPT_API_BASE || '/api'}/parqueaderos/${tenantId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await response.json().catch(() => ({}));
@@ -607,7 +607,7 @@ logoutButton.addEventListener("click", () => {
   // disponible, la sesión local se limpia inmediatamente.
   const jwt = MPTStorage.getSessionToken && MPTStorage.getSessionToken();
   if (jwt && jwt.split('.').length === 3) {
-    fetch('http://localhost:3000/api/auth/logout', {
+    fetch(`${window.MPT_API_BASE || '/api'}/auth/logout`, {
       method: 'POST', headers: { Authorization: `Bearer ${jwt}` },
     }).catch(() => {});
   }

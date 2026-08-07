@@ -1,6 +1,6 @@
 'use strict';
 
-const PRICES_API_BASE = 'http://localhost:3000/api';
+const PRICES_API_BASE = window.MPT_API_BASE || '/api';
 const pricesForm = document.getElementById('pricesForm');
 const motoInput = document.getElementById('motoHourlyPrice');
 const carInput = document.getElementById('carHourlyPrice');

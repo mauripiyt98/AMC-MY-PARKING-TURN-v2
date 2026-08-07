@@ -3,6 +3,7 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 const { hashPassword } = require('../utils/crypto');
+const { getDbConfig } = require('../db/config');
 
 /*
  * Bootstrap seguro e idempotente del acceso principal.
@@ -17,14 +18,7 @@ const { hashPassword } = require('../utils/crypto');
  * la clave indicada y revoca las sesiones anteriores.
  */
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME || 'mpt_parking',
-  user: process.env.DB_SUPERUSER || 'postgres',
-  password: process.env.DB_SUPERPASSWORD || '',
-  ssl: false,
-});
+const pool = new Pool(getDbConfig({ admin: true }));
 
 const PARQUEADERO = {
   codigo: process.env.SEED_PARQUEADERO_CODIGO || 'PARK001',
@@ -47,6 +41,11 @@ async function seed() {
       throw new Error('Falta SEED_ADMIN_PASSWORD en backend/.env.');
     }
     await client.query('BEGIN');
+    // En PostgreSQL administrado DATABASE_URL suele ser el propietario de las
+    // tablas y FORCE RLS tambien aplica a ese usuario. El seed es una accion
+    // interna controlada, por lo que establece el mismo contexto system que
+    // usa la API al aprovisionar un parqueadero.
+    await client.query("SELECT set_config('app.request_context', 'system', true)");
 
     const { rows: parks } = await client.query(
       `SELECT id, codigo, nombre
