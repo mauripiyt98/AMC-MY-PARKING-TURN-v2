@@ -271,6 +271,7 @@ function renderHistoryTable(rows) {
           <td>${formatCurrency(hourlyPrice)}</td>
           <td>${displayTotal}</td>
           <td>${completedHours}</td>
+          <td>${record.operatorName || record.user || 'SIN DATO'}</td>
           <td><button class="delete-action" type="button" data-index="${record.originalIndex}">ELIMINAR</button></td>
         </tr>
       `;
@@ -290,6 +291,7 @@ function renderHistoryTable(rows) {
             <th scope="col">PRECIO HORA</th>
             <th scope="col">TOTAL COBRADO</th>
             <th scope="col">HORAS TOTALES</th>
+            <th scope="col">OPERADOR</th>
             <th scope="col">ELIMINAR</th>
           </tr>
         </thead>
@@ -312,7 +314,7 @@ function renderReport() {
         <table class="records-table report-history-table">
           <tbody>
             <tr class="empty-record">
-              <td colspan="9">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
+              <td colspan="10">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
             </tr>
           </tbody>
         </table>

@@ -123,10 +123,13 @@ function setLocalSession(userData) {
 
 // ── Establecer sesión JWT (desde backend) ─────────────────────
 function setJwtSession(data) {
-  sessionStorage.setItem(SESSION_KEY_JWT, JSON.stringify({
+  const session = {
     token   : data.token,
     expiraEn: data.expira_en,
-  }));
+  };
+  sessionStorage.setItem(SESSION_KEY_JWT, JSON.stringify(session));
+  sessionStorage.setItem('mptBaseSessionV2', JSON.stringify(session));
+  sessionStorage.removeItem('mptActiveOperator');
   sessionStorage.setItem(USER_KEY_JWT, JSON.stringify(data.usuario));
   sessionStorage.setItem(SESSION_KEY_LEGACY,      'true');
   sessionStorage.setItem('mptUser',               data.usuario.documento);

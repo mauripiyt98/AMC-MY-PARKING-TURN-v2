@@ -347,6 +347,20 @@
       </section>
     </div>
 
+    <div id="operatorsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="operatorsModalTitle" hidden>
+      <section class="modal-box usr-operators-modal">
+        <h2 id="operatorsModalTitle">CREAR OPERADORES</h2>
+        <p id="operatorsClientName" class="modal-text"></p>
+        <form id="operatorForm" novalidate>
+          <label class="field modal-field"><span>NOMBRE COMPLETO DEL OPERADOR</span><input id="operatorName" type="text" maxlength="150" autocomplete="off" required></label>
+          <label class="field modal-field"><span>CÓDIGO NUMÉRICO DEL OPERADOR</span><input id="operatorCode" type="password" inputmode="numeric" maxlength="20" autocomplete="new-password" required></label>
+          <p id="operatorFormMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <div class="modal-actions"><button id="closeOperatorsModal" class="usr-btn-secondary" type="button">CERRAR</button><button class="usr-btn-primary" type="submit">CREAR OPERADOR</button></div>
+        </form>
+        <section class="usr-operators-list" aria-label="Operadores creados"><h3>OPERADORES CREADOS</h3><div id="operatorsList"></div></section>
+      </section>
+    </div>
+
     <!-- ===== TOAST NOTIFICACIÓN ===== -->
     <div id="toastNotification" class="usr-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
       <span id="toastMessage"></span>

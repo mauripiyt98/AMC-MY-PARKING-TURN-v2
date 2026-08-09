@@ -7,6 +7,20 @@ const { ValidationError, ConflictError, NotFoundError } = require('../utils/erro
 
 router.use(authMiddleware, tenantMiddleware);
 
+function requireActiveOperator(req, _res, next) {
+  if (!req.user.operador_activo) {
+    return next(new ValidationError('Debes escoger un operador activo antes de realizar movimientos.'));
+  }
+  next();
+}
+
+function requirePrincipalOperator(req, _res, next) {
+  if (!req.user.operador_activo || req.user.operador_tipo !== 'PRINCIPAL') {
+    return next(new ValidationError('Esta acciÃ³n requiere activar al operador principal.'));
+  }
+  next();
+}
+
 const PLATE = /^[A-Z0-9]{3,8}$/;
 const INTEGER = (value, { min = 0 } = {}) => Number.isInteger(Number(value)) && Number(value) >= min;
 const id = (value) => /^[0-9a-f-]{36}$/i.test(String(value || ''));
@@ -49,7 +63,8 @@ function serializeTurn(row) {
     chargedHours: row.horas_cobradas ? Number(row.horas_cobradas) : null,
     totalCharged: row.total_cobrado === null ? null : Number(row.total_cobrado),
     originalTotalCharged: row.total_calculado === null ? null : Number(row.total_calculado),
-    user: row.creado_por_nombre,
+    user: row.operador_nombre || row.creado_por_nombre,
+    operatorName: row.operador_nombre || row.creado_por_nombre,
   };
 }
 
@@ -78,7 +93,7 @@ router.get('/estado', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/turnos', async (req, res, next) => {
+router.post('/turnos', requireActiveOperator, async (req, res, next) => {
   try {
     const plate = normalizePlate(req.body.plate);
     if (!INTEGER(req.body.hourlyPrice) || !req.body.vehicleType) {
@@ -88,9 +103,9 @@ router.post('/turnos', async (req, res, next) => {
     if (Number.isNaN(ingreso.getTime())) throw new ValidationError('Fecha de ingreso inválida.');
     const ticket = await nextTicket(req, 'turnos');
     const { rows } = await req.dbClient.query(
-      `INSERT INTO turnos (parqueadero_id, ticket_numero, placa, tipo_vehiculo, tarifa_hora, ingreso_en, creado_por_id, creado_por_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0, 20), Number(req.body.hourlyPrice), ingreso, req.user.id, req.user.nombre]
+      `INSERT INTO turnos (parqueadero_id, ticket_numero, placa, tipo_vehiculo, tarifa_hora, ingreso_en, creado_por_id, creado_por_nombre, operador_id, operador_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0, 20), Number(req.body.hourlyPrice), ingreso, req.user.id, req.user.nombre, req.user.operador_id, req.user.operador_nombre]
     );
     await audit(req, 'TURNO_CREADO', 'turnos', rows[0].id, { placa: plate, ticket });
     res.status(201).json({ success: true, record: serializeTurn(rows[0]) });
@@ -100,7 +115,7 @@ router.post('/turnos', async (req, res, next) => {
   }
 });
 
-router.post('/turnos/:id/salida', async (req, res, next) => {
+router.post('/turnos/:id/salida', requireActiveOperator, async (req, res, next) => {
   try {
     if (!id(req.params.id)) throw new ValidationError('Identificador de turno inválido.');
     const total = Number(req.body.totalCharged);
@@ -118,7 +133,7 @@ router.post('/turnos/:id/salida', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete('/turnos/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.delete('/turnos/:id', requireRole('ADMIN', 'SUPERADMIN'), requirePrincipalOperator, async (req, res, next) => {
   try {
     const { rows } = await req.dbClient.query(
       `DELETE FROM turnos WHERE id = $1 AND parqueadero_id = $2 RETURNING id, placa`, [req.params.id, req.parqueaderoId]);
@@ -128,7 +143,7 @@ router.delete('/turnos/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res
   } catch (err) { next(err); }
 });
 
-router.post('/mensualidades', async (req, res, next) => {
+router.post('/mensualidades', requirePrincipalOperator, async (req, res, next) => {
   try {
     const plate = normalizePlate(req.body.plate);
     if (!INTEGER(req.body.monthlyRate, { min: 1 }) || !req.body.vehicleType) throw new ValidationError('Datos de mensualidad inválidos.');
@@ -146,7 +161,7 @@ router.post('/mensualidades', async (req, res, next) => {
   }
 });
 
-router.post('/mensualidades/:id/cerrar', async (req, res, next) => {
+router.post('/mensualidades/:id/cerrar', requirePrincipalOperator, async (req, res, next) => {
   try {
     const reason = String(req.body.reason || 'CIERRE MANUAL').slice(0, 80);
     const status = reason === 'VENCIMIENTO AUTOMATICO' ? 'VENCIDA' : 'CERRADA';
@@ -161,7 +176,7 @@ router.post('/mensualidades/:id/cerrar', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete('/mensualidades/:id', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.delete('/mensualidades/:id', requireRole('ADMIN', 'SUPERADMIN'), requirePrincipalOperator, async (req, res, next) => {
   try {
     const { rows } = await req.dbClient.query(`DELETE FROM mensualidades WHERE id = $1 AND parqueadero_id = $2 RETURNING id`, [req.params.id, req.parqueaderoId]);
     if (!rows[0]) throw new NotFoundError('Mensualidad');
@@ -170,7 +185,7 @@ router.delete('/mensualidades/:id', requireRole('ADMIN', 'SUPERADMIN'), async (r
   } catch (err) { next(err); }
 });
 
-router.get('/respaldo', requireRole('ADMIN', 'SUPERADMIN'), async (req, res, next) => {
+router.get('/respaldo', requireRole('ADMIN', 'SUPERADMIN'), requirePrincipalOperator, async (req, res, next) => {
   try {
     const [park, turns, monthly] = await Promise.all([
       req.dbClient.query(`SELECT id, codigo, nombre, nit, direccion, ciudad, departamento, telefono, email, plan FROM parqueaderos WHERE id = $1`, [req.parqueaderoId]),

@@ -32,11 +32,19 @@ const toggleText = document.getElementById('toggleStatusModalText');
 const principalAccountPanel = document.getElementById('principalAccountPanel');
 const principalDevDocument = document.getElementById('principalDevDocument');
 const principalDevEmail = document.getElementById('principalDevEmail');
+const operatorsModal = document.getElementById('operatorsModal');
+const operatorForm = document.getElementById('operatorForm');
+const operatorName = document.getElementById('operatorName');
+const operatorCode = document.getElementById('operatorCode');
+const operatorsClientName = document.getElementById('operatorsClientName');
+const operatorsList = document.getElementById('operatorsList');
+const operatorFormMessage = document.getElementById('operatorFormMessage');
 
 let users = [];
 let pendingId = null;
 let pendingAction = null;
 let toastTimer = null;
+let selectedClientId = null;
 
 function role() {
   return (sessionStorage.getItem('mptRole') || 'operator').toLowerCase();
@@ -165,6 +173,7 @@ function render() {
       <td class="usr-date-cell">${formatDate(user.creado_en)}</td>
       <td><div class="usr-table-actions">
         <button class="usr-action-btn ${user.activo ? 'btn-toggle-active' : 'btn-toggle-inactive'}" data-action="toggle" data-id="${user.id}" title="${user.activo ? 'Desactivar' : 'Activar'} usuario">${user.activo ? '⏻' : '↻'}</button>
+        <button class="usr-action-btn btn-operators" data-action="operators" data-id="${user.id}" title="Crear operadores">★</button>
         <button class="usr-action-btn btn-delete" data-action="deactivate" data-id="${user.id}" title="Desactivar usuario">⌫</button>
       </div></td>
     </tr>`).join('');
@@ -307,6 +316,7 @@ tableBody.addEventListener('click', (event) => {
   if (!user) return;
   pendingId = user.id;
   pendingAction = button.dataset.action;
+  if (pendingAction === 'operators') { openOperatorsModal(user); return; }
   if (pendingAction === 'toggle') {
     document.getElementById('toggleStatusModalTitle').textContent = user.activo ? 'DESACTIVAR USUARIO' : 'ACTIVAR USUARIO';
     toggleText.textContent = `¿Cambiar el estado de ${user.documento}?`;
@@ -337,6 +347,46 @@ async function applyStatus(active) {
     await loadUsers();
   } catch (error) { showToast(error.message, 'error'); }
 }
+
+function renderOperators(operators) {
+  operatorsList.innerHTML = operators.length
+    ? operators.map((operator, index) => `<p><strong>OPERADOR ${index + 1}:</strong> ${escapeHtml(operator.nombre)} <span class="usr-badge ${operator.activo ? 'usr-badge-active' : 'usr-badge-inactive'}">${operator.activo ? '● ACTIVO' : '○ INACTIVO'}</span></p>`).join('')
+    : '<p class="usr-empty-operators">AÚN NO HAY OPERADORES CREADOS.</p>';
+}
+
+async function openOperatorsModal(user) {
+  selectedClientId = user.id;
+  operatorForm.reset();
+  operatorFormMessage.textContent = '';
+  operatorsClientName.textContent = `CLIENTE: ${user.nombre} (${user.parqueadero || user.documento})`;
+  operatorsList.innerHTML = '<p>CARGANDO OPERADORES…</p>';
+  operatorsModal.hidden = false;
+  try {
+    const data = await request(`/usuarios/${encodeURIComponent(user.id)}/operadores`);
+    renderOperators(data.operadores || []);
+    operatorName.focus();
+  } catch (error) { operatorFormMessage.textContent = error.message; }
+}
+
+operatorForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const nombre = operatorName.value.trim();
+  const codigo = operatorCode.value.trim();
+  if (nombre.length < 2 || !/^\d{4,20}$/.test(codigo)) {
+    operatorFormMessage.textContent = 'Ingresa el nombre y un código numérico de 4 a 20 dígitos.';
+    return;
+  }
+  try {
+    await request(`/usuarios/${encodeURIComponent(selectedClientId)}/operadores`, { method: 'POST', body: JSON.stringify({ nombre, codigo }) });
+    operatorForm.reset();
+    const data = await request(`/usuarios/${encodeURIComponent(selectedClientId)}/operadores`);
+    renderOperators(data.operadores || []);
+    operatorFormMessage.textContent = 'Operador creado correctamente.';
+  } catch (error) { operatorFormMessage.textContent = error.message; }
+});
+
+document.getElementById('closeOperatorsModal').addEventListener('click', () => { operatorsModal.hidden = true; });
+operatorsModal.addEventListener('click', (event) => { if (event.target === operatorsModal) operatorsModal.hidden = true; });
 
 document.getElementById('confirmToggleStatus').addEventListener('click', async () => {
   const user = users.find((item) => item.id === pendingId);

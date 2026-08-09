@@ -2,7 +2,7 @@
 
 const router              = require('express').Router();
 const Usuario             = require('../models/Usuario');
-const { withAuthContext } = require('../db/pool');
+const { withAuthContext, withTenant } = require('../db/pool');
 const { hashPassword }    = require('../utils/crypto');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { tenantMiddleware } = require('../middleware/tenant');
@@ -164,5 +164,48 @@ router.delete('/:id', requireRole('SUPERADMIN'), async (req, res, next) => {
     next(err);
   }
 });
+
+// Operadores de caja: el desarrollador los crea para el parqueadero del
+// usuario cliente seleccionado. No son cuentas de inicio de sesiÃ³n.
+router.get('/:id/operadores', requireRole('SUPERADMIN'), async (req, res, next) => {
+  try {
+    const account = await withAuthContext(async (client) => (await client.query(
+      `SELECT parqueadero_id, nombre FROM usuarios WHERE id = $1`, [req.params.id]
+    )).rows[0]);
+    if (!account) throw new NotFoundError('Usuario cliente');
+    const operadores = await withTenant(account.parqueadero_id, async (client) => (await client.query(
+        `SELECT id, nombre, activo, creado_en FROM operadores WHERE parqueadero_id = $1 ORDER BY creado_en ASC`,
+        [account.parqueadero_id]
+    )).rows);
+    res.json({ success: true, cliente: account.nombre, operadores });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/operadores', requireRole('SUPERADMIN'),
+  validateBody({
+    nombre: [required('Nombre del operador requerido'), minLen(2, 'Nombre muy corto'), maxLen(150, 'Nombre muy largo')],
+    codigo: [required('CÃ³digo de operador requerido'), minLen(4, 'El cÃ³digo debe tener al menos 4 dÃ­gitos'), maxLen(20, 'CÃ³digo muy largo')],
+  }),
+  async (req, res, next) => {
+    try {
+      const codigo = String(req.body.codigo).trim();
+      if (!/^\d+$/.test(codigo)) throw new ValidationError('El cÃ³digo del operador debe ser numÃ©rico.');
+      const codigo_hash = await hashPassword(codigo);
+      const account = await withAuthContext(async (client) => (await client.query(
+        `SELECT parqueadero_id FROM usuarios WHERE id = $1`, [req.params.id]
+      )).rows[0]);
+      if (!account) throw new NotFoundError('Usuario cliente');
+      const operador = await withTenant(account.parqueadero_id, async (client) => {
+        const { rows } = await client.query(
+          `INSERT INTO operadores (parqueadero_id, nombre, codigo_hash, creado_por_id)
+           VALUES ($1,$2,$3,$4) RETURNING id, nombre, activo, creado_en`,
+          [account.parqueadero_id, String(req.body.nombre).trim(), codigo_hash, req.user.id]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ success: true, operador });
+    } catch (err) { next(err); }
+  }
+);
 
 module.exports = router;

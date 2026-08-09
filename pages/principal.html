@@ -40,6 +40,16 @@
 
       <p id="welcomeMessage" class="welcome-message" aria-live="polite">BIENVENIDO</p>
 
+      <section class="operator-status" aria-label="Operador activo">
+        <span class="operator-status-label">OPERADOR</span>
+        <strong id="activeOperatorName">ESCOGER OPERADOR</strong>
+        <span id="activeOperatorState">SIN OPERADOR ACTIVO</span>
+        <div class="operator-status-actions">
+          <button id="chooseOperatorButton" type="button">ESCOGER OPERADOR</button>
+          <button id="closeOperatorButton" type="button" hidden>CERRAR TURNO</button>
+        </div>
+      </section>
+
       <section class="plate-panel" aria-labelledby="plate-title">
         <h2 id="plate-title">INGRESA</h2>
         <form id="plateForm" novalidate>
@@ -152,6 +162,20 @@
           <button class="secondary-action" type="button" id="cancelExit">NO</button>
           <button class="danger-action" type="button" id="confirmExit">SI</button>
         </div>
+      </section>
+    </div>
+
+    <div id="operatorModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="operatorModalTitle" hidden>
+      <section class="modal-box operator-modal-box">
+        <h2 id="operatorModalTitle">ESCOGER OPERADOR</h2>
+        <p id="operatorSelectMessage" class="modal-text">Selecciona quién realizará los movimientos.</p>
+        <div id="operatorOptions" class="operator-options"></div>
+        <form id="operatorCodeForm" hidden>
+          <p id="selectedOperatorLabel" class="modal-text"></p>
+          <label class="field modal-field"><span id="operatorCodeLabel">CÓDIGO DEL OPERADOR</span><input id="operatorCodeInput" type="password" inputmode="numeric" maxlength="100" autocomplete="current-password" required></label>
+          <p id="operatorModalMessage" class="form-message" role="alert" aria-live="polite"></p>
+          <div class="modal-actions"><button id="cancelOperatorSelection" class="secondary-action" type="button">VOLVER</button><button class="primary-action" type="submit">ACTIVAR OPERADOR</button></div>
+        </form>
       </section>
     </div>
 

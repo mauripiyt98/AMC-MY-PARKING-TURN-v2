@@ -57,6 +57,10 @@ async function authMiddleware(req, _res, next) {
       rol           : payload.rol,
       jti           : payload.jti,
       nombre        : payload.nombre,
+      operador_activo: payload.operador_activo === true,
+      operador_id    : payload.operador_id || null,
+      operador_nombre: payload.operador_nombre || null,
+      operador_tipo  : payload.operador_tipo || null,
     };
 
     next();

@@ -777,6 +777,13 @@
   align-items: center;
 }
 
+.btn-operators { color: #7f1519; background: #fff0f1; }
+.usr-operators-modal { width: min(94vw, 560px); max-height: 88vh; overflow: auto; }
+.usr-operators-list { margin-top: 22px; border-top: 1px solid #d8dde3; padding-top: 16px; text-align: left; }
+.usr-operators-list h3 { margin: 0 0 10px; color: #7f1519; font-size: 15px; }
+.usr-operators-list p { margin: 8px 0; font-size: 13px; }
+.usr-empty-operators { color: #65707d; font-weight: 800; }
+
 .usr-action-btn {
   display: flex;
   align-items: center;

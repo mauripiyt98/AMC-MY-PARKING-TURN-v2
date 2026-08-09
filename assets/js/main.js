@@ -35,11 +35,23 @@ const cancelDelete         = document.querySelector("#cancelDelete");
 const logoutButton         = document.querySelector("#logoutButton");
 const manageUsersLink      = document.querySelector("#btnGestionUsuarios");
 const welcomeMessage       = document.querySelector("#welcomeMessage");
+const operatorModal        = document.querySelector("#operatorModal");
+const chooseOperatorButton = document.querySelector("#chooseOperatorButton");
+const closeOperatorButton  = document.querySelector("#closeOperatorButton");
+const activeOperatorName   = document.querySelector("#activeOperatorName");
+const activeOperatorState  = document.querySelector("#activeOperatorState");
+const operatorOptions      = document.querySelector("#operatorOptions");
+const operatorCodeForm     = document.querySelector("#operatorCodeForm");
+const operatorCodeInput    = document.querySelector("#operatorCodeInput");
+const operatorModalMessage = document.querySelector("#operatorModalMessage");
+const selectedOperatorLabel = document.querySelector("#selectedOperatorLabel");
+const operatorCodeLabel    = document.querySelector("#operatorCodeLabel");
 
 
 // ===== Estado local =====
 let pendingExitIndex = null;
 let pendingDelete    = null;
+let pendingOperator = null;
 
 async function renderWelcomeMessage() {
   if (!welcomeMessage) return;
@@ -75,6 +87,56 @@ async function renderWelcomeMessage() {
   welcomeMessage.textContent = commercialName
     ? `BIENVENIDO ${commercialName.toUpperCase()}`
     : 'BIENVENIDO';
+}
+
+function getSelectedOperator() {
+  return MPTStorage.getActiveOperator ? MPTStorage.getActiveOperator() : null;
+}
+
+function renderOperatorStatus() {
+  const operator = getSelectedOperator();
+  const active = Boolean(operator);
+  const operatorOnly = active && operator.tipo === 'OPERADOR';
+  activeOperatorName.textContent = active ? operator.nombre : 'ESCOGER OPERADOR';
+  activeOperatorState.textContent = active ? '🟢 ACTIVO' : 'SIN OPERADOR ACTIVO';
+  closeOperatorButton.hidden = !active;
+  chooseOperatorButton.hidden = active;
+  document.body.classList.toggle('operator-locked', !active);
+  [...plateForm.elements].forEach((element) => { element.disabled = !active; });
+  document.querySelectorAll('.exit-action, .delete-action').forEach((button) => { button.disabled = !active; });
+  document.querySelector('.operator-status')?.classList.toggle('is-active', active);
+  document.querySelectorAll('.profile-action, .side-module, .side-actions').forEach((element) => { element.hidden = operatorOnly; });
+  if (manageUsersLink) manageUsersLink.hidden = operatorOnly || MPTStorage.getActiveUserRole() !== 'superadmin';
+}
+
+function showOperatorCodeForm(operator) {
+  pendingOperator = operator;
+  operatorOptions.hidden = true;
+  operatorCodeForm.hidden = false;
+  operatorModalMessage.textContent = '';
+  selectedOperatorLabel.textContent = operator.tipo === 'PRINCIPAL' ? 'OPERADOR PRINCIPAL' : operator.nombre;
+  operatorCodeLabel.textContent = operator.tipo === 'PRINCIPAL' ? 'CLAVE DEL OPERADOR PRINCIPAL' : 'CÓDIGO DEL OPERADOR';
+  operatorCodeInput.value = '';
+  operatorCodeInput.focus();
+}
+
+async function openOperatorModal() {
+  pendingOperator = null;
+  operatorCodeForm.hidden = true;
+  operatorOptions.hidden = false;
+  operatorOptions.innerHTML = '<p>CARGANDO OPERADORES…</p>';
+  operatorModal.hidden = false;
+  try {
+    const data = await MPTStorage.apiRequest('/auth/operadores');
+    const options = [{ id: null, nombre: 'OPERADOR PRINCIPAL', tipo: 'PRINCIPAL' }, ...(data.operadores || []).map((operator) => ({ ...operator, tipo: 'OPERADOR' }))];
+    operatorOptions.innerHTML = options.map((operator, index) => `<button type="button" data-operator-index="${index}">${operator.nombre}</button>`).join('') || '<p>NO HAY OPERADORES CREADOS.</p>';
+    operatorOptions.onclick = (event) => {
+      const button = event.target.closest('[data-operator-index]');
+      if (button) showOperatorCodeForm(options[Number(button.dataset.operatorIndex)]);
+    };
+  } catch (error) {
+    operatorOptions.innerHTML = `<p>${error.message}</p>`;
+  }
 }
 
 // ============================================================
@@ -592,6 +654,36 @@ recordsBody.addEventListener("click", (event) => {
   }
 });
 
+chooseOperatorButton.addEventListener('click', openOperatorModal);
+document.querySelector('#cancelOperatorSelection').addEventListener('click', () => {
+  operatorCodeForm.hidden = true;
+  operatorOptions.hidden = false;
+});
+operatorModal.addEventListener('click', (event) => { if (event.target === operatorModal) operatorModal.hidden = true; });
+operatorCodeForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!pendingOperator) return;
+  operatorModalMessage.textContent = '';
+  try {
+    const data = await MPTStorage.apiRequest('/auth/operadores/activar', {
+      method: 'POST',
+      body: JSON.stringify({ tipo: pendingOperator.tipo, operadorId: pendingOperator.id, codigo: operatorCodeInput.value }),
+    });
+    MPTStorage.saveActiveOperator(data);
+    operatorModal.hidden = true;
+    renderOperatorStatus();
+    renderRecords();
+    plateMessage.textContent = `${data.operador.nombre} es el operador activo.`;
+  } catch (error) { operatorModalMessage.textContent = error.message; }
+});
+closeOperatorButton.addEventListener('click', async () => {
+  try { await MPTStorage.closeActiveOperator(); }
+  catch (error) { plateMessage.textContent = error.message; return; }
+  renderOperatorStatus();
+  renderRecords();
+  plateMessage.textContent = 'Turno de operador cerrado. El sistema quedó en modo consulta.';
+});
+
 cancelExit.addEventListener("click", closeExitModal);
 
 confirmExit.addEventListener("click", async () => {
@@ -673,6 +765,7 @@ if (manageUsersLink) {
 }
 
 renderWelcomeMessage();
+renderOperatorStatus();
 
 plateForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -709,7 +802,7 @@ plateForm.addEventListener("submit", async (event) => {
     time:         formatTime(now),
     vehicleType:  selectedVehicle.type,
     hourlyPrice:  selectedVehicle.price,
-    user:         MPTStorage.getActiveUserName(),
+    user:         getSelectedOperator()?.nombre || MPTStorage.getActiveUserName(),
   };
 
   try {
@@ -738,4 +831,5 @@ window.addEventListener('mpt:storage-hydrated', () => {
   migrateTicketNumbers();
   renderRecords();
   renderWelcomeMessage();
+  renderOperatorStatus();
 });

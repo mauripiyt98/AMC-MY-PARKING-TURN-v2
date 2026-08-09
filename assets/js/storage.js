@@ -33,6 +33,8 @@ const SESSION_KEYS = {
   // JWT (fase backend)
   sessionJwt:  'mptSessionV2',
   userJwt:     'mptUserV2',
+  baseSessionJwt: 'mptBaseSessionV2',
+  activeOperator: 'mptActiveOperator',
   // Legacy flag (compatibilidad con session-guard.js)
   sessionLegacy: 'mptSessionActive',
 };
@@ -143,6 +145,40 @@ function saveSession(sessionData) {
 function clearSession() {
   // Limpiar todas las claves de sesion (local + JWT + legacy)
   Object.values(SESSION_KEYS).forEach((key) => sessionStorage.removeItem(key));
+}
+
+function getActiveOperator() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEYS.activeOperator) || 'null'); }
+  catch { return null; }
+}
+
+function saveActiveOperator(session) {
+  if (!sessionStorage.getItem(SESSION_KEYS.baseSessionJwt)) {
+    const current = sessionStorage.getItem(SESSION_KEYS.sessionJwt);
+    if (current) sessionStorage.setItem(SESSION_KEYS.baseSessionJwt, current);
+  }
+  const data = { token: session.token, expiraEn: session.expira_en };
+  sessionStorage.setItem(SESSION_KEYS.sessionJwt, JSON.stringify(data));
+  sessionStorage.setItem(SESSION_KEYS.sessionToken, session.token);
+  if (session.rol) sessionStorage.setItem(SESSION_KEYS.role, String(session.rol).toLowerCase());
+  sessionStorage.setItem(SESSION_KEYS.activeOperator, JSON.stringify(session.operador));
+}
+
+async function closeActiveOperator() {
+  if (getActiveOperator() && hasJwtSession()) {
+    await apiRequest('/auth/operadores/cerrar', { method: 'POST', body: JSON.stringify({}) });
+  }
+  const base = sessionStorage.getItem(SESSION_KEYS.baseSessionJwt);
+  if (base) {
+    const parsed = JSON.parse(base);
+    sessionStorage.setItem(SESSION_KEYS.sessionJwt, base);
+    sessionStorage.setItem(SESSION_KEYS.sessionToken, parsed.token || '');
+    try {
+      const payload = JSON.parse(atob(String(parsed.token || '').split('.')[1] || ''));
+      if (payload.rol) sessionStorage.setItem(SESSION_KEYS.role, String(payload.rol).toLowerCase());
+    } catch { /* La sesiÃ³n base se validarÃ¡ nuevamente en el servidor. */ }
+  }
+  sessionStorage.removeItem(SESSION_KEYS.activeOperator);
 }
 
 
@@ -519,6 +555,9 @@ window.MPTStorage = {
   getActiveTenantId,
   getActiveUserName,
   getActiveUserRole,
+  getActiveOperator,
+  saveActiveOperator,
+  closeActiveOperator,
   getActiveCodigoParqueadero,
   getSessionToken,
   apiRequest,
