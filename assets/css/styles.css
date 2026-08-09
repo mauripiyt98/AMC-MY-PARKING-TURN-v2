@@ -1365,9 +1365,11 @@ a {
     margin-top: 20px;
   }
 
-  .side-actions button {
+  .side-actions button,
+  .side-actions-link {
     width: min(92vw, 280px);
     min-height: 60px;
+    font-size: 16px;
   }
 
   .secondary-action {
