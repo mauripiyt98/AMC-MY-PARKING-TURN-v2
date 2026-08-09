@@ -55,6 +55,24 @@ descargar únicamente los datos de su tenant como copia operativa; no sustituye
 el respaldo completo. Nunca exponga `DATABASE_URL`, `DB_SUPER_URL`, respaldos
 SQL ni `JWT_SECRET` al frontend.
 
+## Requisitos obligatorios antes de producción
+
+1. Ejecute las migraciones con el usuario administrador configurado como
+   `DB_SUPER_URL`.
+2. Ejecute una vez [`production_app_role.sql`](../backend/db/production_app_role.sql)
+   con ese administrador, defina una contraseña aleatoria para `mpt_app` y use
+   ese usuario sin privilegios administrativos en `DATABASE_URL` o `DB_USER`.
+3. Configure `CORS_ORIGIN` con el dominio HTTPS exacto, `DB_SSL=true`,
+   `DB_SSL_REJECT_UNAUTHORIZED=true` y un `JWT_SECRET` aleatorio de al menos
+   32 caracteres.
+4. Ejecute `npm run preflight:production`. Debe aprobar antes de iniciar la
+   aplicación; verifica TLS, que el rol no tenga `SUPERUSER`/`BYPASSRLS`, RLS
+   forzado y que no pueda alterar ni truncar `auditoria_eventos`.
+
+La migración `008_production_security_hardening.sql` hace la bitácora
+append-only a nivel de RLS y trigger: permite `SELECT` e `INSERT` dentro del
+tenant, y bloquea `UPDATE` y `DELETE`.
+
 ## Despliegue en un host
 
 El backend publica el frontend y la API desde el mismo dominio. Por eso el

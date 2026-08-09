@@ -13,10 +13,9 @@ function sslConfig() {
   if (!enabled) return false;
 
   return {
-    // En servicios administrados se valida con el CA incluido por el host si
-    // se proporciona. El valor por defecto mantiene compatibilidad con los
-    // certificados de las plataformas PaaS.
-    rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED).toLowerCase() === 'true',
+    // La validación del certificado es obligatoria por defecto. Solo una
+    // instalación local de desarrollo debe desactivarla explícitamente.
+    rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED).toLowerCase() !== 'false',
   };
 }
 

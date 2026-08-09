@@ -19,6 +19,23 @@ const operacionRoutes    = require('./routes/operacion.routes');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+function assertProductionConfiguration() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const jwtSecret = String(process.env.JWT_SECRET || '').trim();
+  if (jwtSecret.length < 32 || /^CAMBIAR/i.test(jwtSecret)) {
+    throw new Error('Producción requiere un JWT_SECRET aleatorio de al menos 32 caracteres.');
+  }
+  if (!String(process.env.CORS_ORIGIN || '').trim()) {
+    throw new Error('Producción requiere CORS_ORIGIN con el dominio HTTPS público permitido.');
+  }
+  if (String(process.env.DB_SSL_REJECT_UNAUTHORIZED).toLowerCase() === 'false') {
+    throw new Error('Producción no permite DB_SSL_REJECT_UNAUTHORIZED=false. Configure el CA de PostgreSQL.');
+  }
+}
+
+assertProductionConfiguration();
+
 if (process.env.TRUST_PROXY !== 'false') app.set('trust proxy', 1);
 
 // ── Seguridad HTTP headers ───────────────────────────
@@ -55,7 +72,7 @@ app.use(cors({
   },
   credentials   : true,
   methods        : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders : ['Content-Type', 'Authorization', 'X-Parqueadero-ID'],
+  allowedHeaders : ['Content-Type', 'Authorization'],
 }));
 
 // ── Body parsing ─────────────────────────────────────

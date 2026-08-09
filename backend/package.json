@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "migrate": "node db/migrate.js",
     "seed": "node scripts/seed.js",
+    "preflight:production": "node scripts/preflight-production.js",
     "test": "node --test tests/"
   },
   "dependencies": {
