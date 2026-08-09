@@ -27,6 +27,34 @@ del navegador para que el modo sin servidor siga funcionando.
 - Aislamiento multiempresa con PostgreSQL Row Level Security (RLS), contexto de
   tenant por transacción y consultas que incluyen `parqueadero_id`.
 
+## Operación persistente y aislamiento de clientes
+
+La migración `007_operacion_multi_tenant.sql` deja PostgreSQL como fuente de
+verdad. `localStorage` queda solo como caché visual: no conserva ni comparte
+información entre equipos.
+
+Cada parqueadero es un tenant (una fila de `parqueaderos`), no una carpeta del
+servidor. Sus datos se separan por `parqueadero_id` en `turnos`,
+`mensualidades`, `documentos_generados` (metadatos/llave privada de futuros
+PDF) y `auditoria_eventos`. RLS se habilita y fuerza para cada una. El backend
+obtiene el tenant únicamente del JWT y lo fija mediante `SET LOCAL`; el
+navegador nunca puede elegir ni enviar un tenant ajeno.
+
+Los constraints impiden dos turnos activos o dos mensualidades activas para
+una misma placa dentro del tenant. Los consecutivos se generan dentro de una
+transacción bloqueada por tenant, por lo que dos equipos no pueden duplicarlos.
+Cada apertura del módulo recupera el estado desde `/api/operacion/estado` y
+cada alta, salida, cierre o eliminación se persiste en PostgreSQL.
+
+### Respaldos
+
+Programe en el VPS un `pg_dump` diario cifrado fuera del servidor (bucket
+privado/MinIO/proveedor externo), con al menos 30 días de retención y pruebas
+de restauración periódicas. `GET /api/operacion/respaldo` permite a un ADMIN
+descargar únicamente los datos de su tenant como copia operativa; no sustituye
+el respaldo completo. Nunca exponga `DATABASE_URL`, `DB_SUPER_URL`, respaldos
+SQL ni `JWT_SECRET` al frontend.
+
 ## Despliegue en un host
 
 El backend publica el frontend y la API desde el mismo dominio. Por eso el

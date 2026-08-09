@@ -150,7 +150,7 @@ function getPeriodLabel() {
  * Mueve al historico los registros cuya fecha de vencimiento
  * ya paso. Se ejecuta al cargar la pagina.
  */
-function checkExpiredSubscriptions() {
+async function checkExpiredSubscriptions() {
   const records  = getMonthlyRecords();
   const history  = getMonthlyHistory();
   const todayStr = getTodayStr();
@@ -171,8 +171,14 @@ function checkExpiredSubscriptions() {
   });
 
   if (nowExpired.length > 0) {
-    saveMonthlyRecords(stillActive);
-    saveMonthlyHistory([...nowExpired, ...history]);
+    if (MPTStorage.hasJwtSession()) {
+      for (const record of nowExpired) {
+        await MPTStorage.closeMonthly(record.id, 'VENCIMIENTO AUTOMATICO');
+      }
+    } else {
+      saveMonthlyRecords(stillActive);
+      saveMonthlyHistory([...nowExpired, ...history]);
+    }
   }
 }
 
@@ -353,18 +359,28 @@ exitModal.addEventListener("click", (e) => {
   if (e.target === exitModal) closeExitModal();
 });
 
-confirmExitBtn.addEventListener("click", () => {
+confirmExitBtn.addEventListener("click", async () => {
   if (pendingExitIndex === null) { closeExitModal(); return; }
 
   const records = getMonthlyRecords();
   const record  = records[pendingExitIndex];
 
   if (record) {
-    const history = getMonthlyHistory();
-    history.unshift({ ...record, closedDate: getTodayStr(), closedReason: "CIERRE MANUAL" });
-    saveMonthlyHistory(history);
-    records.splice(pendingExitIndex, 1);
-    saveMonthlyRecords(records);
+    try {
+      if (MPTStorage.hasJwtSession()) {
+        await MPTStorage.closeMonthly(record.id, 'CIERRE MANUAL');
+      } else {
+        const history = getMonthlyHistory();
+        history.unshift({ ...record, closedDate: getTodayStr(), closedReason: "CIERRE MANUAL" });
+        saveMonthlyHistory(history);
+        records.splice(pendingExitIndex, 1);
+        saveMonthlyRecords(records);
+      }
+    } catch (error) {
+      mFormMessage.textContent = error.message || 'No fue posible cerrar la mensualidad en el servidor.';
+      closeExitModal();
+      return;
+    }
     mFormMessage.textContent = `Mensualidad MEN-${record.ticketNumber} cerrada para ${record.plate}.`;
     renderActiveSubscriptions();
     renderCalendar();
@@ -402,7 +418,7 @@ deleteModal.addEventListener("click", (e) => {
   if (e.target === deleteModal) closeDeleteModal();
 });
 
-deleteForm.addEventListener("submit", (e) => {
+deleteForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const userRole = MPTStorage.getActiveUserRole();
@@ -426,8 +442,16 @@ deleteForm.addEventListener("submit", (e) => {
   if (pendingDelete.type === "active") {
     const records = getMonthlyRecords();
     const record  = records[pendingDelete.index];
-    records.splice(pendingDelete.index, 1);
-    saveMonthlyRecords(records);
+    try {
+      if (MPTStorage.hasJwtSession()) await MPTStorage.deleteMonthly(record.id);
+      else {
+        records.splice(pendingDelete.index, 1);
+        saveMonthlyRecords(records);
+      }
+    } catch (error) {
+      deleteMessage.textContent = error.message || 'No fue posible eliminar la mensualidad.';
+      return;
+    }
     mFormMessage.textContent = record
       ? `Registro activo eliminado para la placa ${record.plate}.`
       : "";
@@ -436,8 +460,16 @@ deleteForm.addEventListener("submit", (e) => {
   } else if (pendingDelete.type === "history") {
     const history = getMonthlyHistory();
     const record  = history[pendingDelete.index];
-    history.splice(pendingDelete.index, 1);
-    saveMonthlyHistory(history);
+    try {
+      if (MPTStorage.hasJwtSession()) await MPTStorage.deleteMonthly(record.id);
+      else {
+        history.splice(pendingDelete.index, 1);
+        saveMonthlyHistory(history);
+      }
+    } catch (error) {
+      deleteMessage.textContent = error.message || 'No fue posible eliminar la mensualidad.';
+      return;
+    }
     mHistoryMessage.textContent = record
       ? `Registro historico eliminado para la placa ${record.plate}.`
       : "";
@@ -497,7 +529,7 @@ nextMonthBtn.addEventListener("click", () => {
 // FORMULARIO DE REGISTRO
 // ================================================================
 
-monthlyForm.addEventListener("submit", (e) => {
+monthlyForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const plate = normalizePlate(mPlacaInput.value);
@@ -549,8 +581,18 @@ monthlyForm.addEventListener("submit", (e) => {
     createdAt:    new Date().toISOString(),
   };
 
-  records.unshift(newRecord);
-  saveMonthlyRecords(records);
+  try {
+    if (MPTStorage.hasJwtSession()) {
+      const persisted = await MPTStorage.createMonthly(newRecord);
+      newRecord.ticketNumber = persisted.ticketNumber;
+    } else {
+      records.unshift(newRecord);
+      saveMonthlyRecords(records);
+    }
+  } catch (error) {
+    mFormMessage.textContent = error.message || 'No fue posible registrar la mensualidad en el servidor.';
+    return;
+  }
   mFormMessage.textContent = `Mensualidad MEN-${newRecord.ticketNumber} registrada para ${plate}. Vence: ${formatDateDisplay(expiryDate)}.`;
   monthlyForm.reset();
   mStartDateInput.value = getTodayStr();
@@ -600,11 +642,12 @@ logoutButton.addEventListener("click", () => {
 // INICIALIZACION
 // ================================================================
 
-function init() {
+async function init() {
+  await MPTStorage.hydrateFromServer();
   // Fecha de hoy como valor por defecto del campo de inicio
   mStartDateInput.value = getTodayStr();
   // Mover a historico los vencidos automaticamente
-  checkExpiredSubscriptions();
+  await checkExpiredSubscriptions();
   // Renderizar
   renderCalendar();
   renderActiveSubscriptions();
@@ -614,8 +657,14 @@ function init() {
 init();
 
 // Refrescar estado en tiempo real cada 60 segundos
-setInterval(() => {
-  checkExpiredSubscriptions();
+setInterval(async () => {
+  await checkExpiredSubscriptions();
   renderActiveSubscriptions();
   renderCalendar();
 }, 60000);
+
+window.addEventListener('mpt:storage-hydrated', () => {
+  renderCalendar();
+  renderActiveSubscriptions();
+  renderHistory();
+});

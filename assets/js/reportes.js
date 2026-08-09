@@ -349,7 +349,7 @@ function closeDeleteModal() {
   deleteMessage.textContent = "";
 }
 
-function deleteHistoryRecord(index) {
+async function deleteHistoryRecord(index) {
   const history = getHistory();
   const record  = history[index];
 
@@ -358,8 +358,17 @@ function deleteHistoryRecord(index) {
     return;
   }
 
-  history.splice(index, 1);
-  saveHistory(history);
+  try {
+    if (MPTStorage.hasJwtSession()) {
+      await MPTStorage.deleteTurn(record.id);
+    } else {
+      history.splice(index, 1);
+      saveHistory(history);
+    }
+  } catch (error) {
+    deleteMessage.textContent = error.message || 'No fue posible eliminar el histórico en el servidor.';
+    return;
+  }
   closeDeleteModal();
   reportMessage.textContent = `Registro historico eliminado para la placa ${record.plate}.`;
   renderReport();
@@ -398,7 +407,7 @@ deleteModal.addEventListener("click", (event) => {
   }
 });
 
-deleteForm.addEventListener("submit", (event) => {
+deleteForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const userRole = MPTStorage.getActiveUserRole();
@@ -417,7 +426,7 @@ deleteForm.addEventListener("submit", (event) => {
     return;
   }
 
-  deleteHistoryRecord(pendingDeleteIndex);
+  await deleteHistoryRecord(pendingDeleteIndex);
 });
 
 logoutButton.addEventListener("click", () => {
@@ -429,5 +438,11 @@ logoutButton.addEventListener("click", () => {
 // INICIALIZACION
 // ================================================================
 
-migrateHistoryTicketNumbers();
-renderReport();
+async function initReport() {
+  await MPTStorage.hydrateFromServer();
+  migrateHistoryTicketNumbers();
+  renderReport();
+}
+
+initReport();
+window.addEventListener('mpt:storage-hydrated', renderReport);

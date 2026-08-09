@@ -14,6 +14,7 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const authRoutes         = require('./routes/auth.routes');
 const usuariosRoutes     = require('./routes/usuarios.routes');
 const parqueaderosRoutes = require('./routes/parqueaderos.routes');
+const operacionRoutes    = require('./routes/operacion.routes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -93,6 +94,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth',         authRoutes);
 app.use('/api/usuarios',     usuariosRoutes);
 app.use('/api/parqueaderos', parqueaderosRoutes);
+app.use('/api/operacion',    operacionRoutes);
 
 app.get('/api/health/db', async (_req, res) => {
   try {

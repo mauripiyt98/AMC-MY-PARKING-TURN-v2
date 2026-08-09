@@ -2,8 +2,9 @@
 
 const router         = require('express').Router();
 const UsuarioService = require('../services/UsuarioService');
-const { validateBody, required } = require('../middleware/validate');
+const { validateBody, required, minLen, isEmail } = require('../middleware/validate');
 const { authMiddleware } = require('../middleware/auth');
+const { tenantMiddleware } = require('../middleware/tenant');
 
 /**
  * POST /api/auth/login
@@ -47,8 +48,34 @@ router.post('/logout', authMiddleware, async (req, res, next) => {
  * GET /api/auth/me
  * Retorna los datos del usuario autenticado.
  */
-router.get('/me', authMiddleware, async (req, res) => {
-  res.json({ success: true, usuario: req.user });
+router.get('/me', authMiddleware, tenantMiddleware, async (req, res, next) => {
+  try {
+    const { rows } = await req.dbClient.query(
+      `SELECT id, nombre, documento, email, rol, parqueadero_id
+       FROM usuarios WHERE id = $1 AND parqueadero_id = $2`,
+      [req.user.id, req.parqueaderoId]
+    );
+    res.json({ success: true, usuario: rows[0] || req.user });
+  } catch (err) { next(err); }
 });
+
+/** Datos personales del operador. El documento no se modifica por este flujo:
+ * es su identificador de acceso y requiere un proceso administrativo aparte. */
+router.patch('/me',
+  authMiddleware,
+  tenantMiddleware,
+  validateBody({ nombre: [required('Nombre requerido'), minLen(2, 'Nombre muy corto')], email: [isEmail('Correo inválido')] }),
+  async (req, res, next) => {
+    try {
+      const { rows } = await req.dbClient.query(
+        `UPDATE usuarios SET nombre = $1, email = $2
+         WHERE id = $3 AND parqueadero_id = $4
+         RETURNING id, nombre, documento, email, rol, parqueadero_id`,
+        [String(req.body.nombre).trim(), req.body.email ? String(req.body.email).trim() : null, req.user.id, req.parqueaderoId]
+      );
+      res.json({ success: true, usuario: rows[0] });
+    } catch (err) { next(err); }
+  }
+);
 
 module.exports = router;

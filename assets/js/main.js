@@ -336,7 +336,7 @@ function closeDeleteModal() {
   deleteMessage.textContent = "";
 }
 
-function deleteActiveRecord(index) {
+async function deleteActiveRecord(index) {
   const records = MPTStorage.getRecords();
   const record  = records[index];
 
@@ -344,13 +344,17 @@ function deleteActiveRecord(index) {
     return;
   }
 
-  records.splice(index, 1);
-  MPTStorage.saveRecords(records);
+  if (MPTStorage.hasJwtSession()) {
+    await MPTStorage.deleteTurn(record.id);
+  } else {
+    records.splice(index, 1);
+    MPTStorage.saveRecords(records);
+  }
   renderRecords();
   plateMessage.textContent = `Registro activo eliminado para la placa ${record.plate}.`;
 }
 
-function confirmDeleteWithRoleCheck(password) {
+async function confirmDeleteWithRoleCheck(password) {
   // ============================================================
   // VALIDACION DE ELIMINACION
   //
@@ -390,7 +394,12 @@ function confirmDeleteWithRoleCheck(password) {
   }
 
   if (pendingDelete.type === "active") {
-    deleteActiveRecord(pendingDelete.index);
+    try {
+      await deleteActiveRecord(pendingDelete.index);
+    } catch (error) {
+      deleteMessage.textContent = error.message || 'No fue posible eliminar el turno en el servidor.';
+      return;
+    }
   }
 
   closeDeleteModal();
@@ -451,7 +460,7 @@ function closeChargeModal() {
 // REGISTRAR SALIDA
 // ============================================================
 
-function registerExit(recordIndex, customCharge = null) {
+async function registerExit(recordIndex, customCharge = null) {
   const records = MPTStorage.getRecords();
   const record  = records[recordIndex];
 
@@ -476,7 +485,8 @@ function registerExit(recordIndex, customCharge = null) {
     originalTotalCharged
   };
 
-  history.unshift({
+  const historyRecord = {
+    id: record.id,
     plate:        record.plate,
     ticketNumber: record.ticketNumber,
     entryIso:     record.entryIso,
@@ -488,11 +498,20 @@ function registerExit(recordIndex, customCharge = null) {
     chargedHours,
     totalCharged: finalTotalCharged,
     originalTotalCharged
-  });
+  };
 
-  records.splice(recordIndex, 1);
-  MPTStorage.saveRecords(records);
-  MPTStorage.saveHistory(history);
+  if (MPTStorage.hasJwtSession()) {
+    await MPTStorage.closeTurn(record.id, {
+      chargedHours,
+      totalCharged: finalTotalCharged,
+      originalTotalCharged,
+    });
+  } else {
+    history.unshift(historyRecord);
+    records.splice(recordIndex, 1);
+    MPTStorage.saveRecords(records);
+    MPTStorage.saveHistory(history);
+  }
   renderRecords();
   plateMessage.textContent = `Salida generada para ${record.plate}. Total cobrado: ${formatCurrency(finalTotalCharged)}.`;
   return chargeReceipt;
@@ -548,7 +567,7 @@ recordsBody.addEventListener("click", (event) => {
 
 cancelExit.addEventListener("click", closeExitModal);
 
-confirmExit.addEventListener("click", () => {
+confirmExit.addEventListener("click", async () => {
   if (pendingExitIndex === null) {
     closeExitModal();
     return;
@@ -563,11 +582,12 @@ confirmExit.addEventListener("click", () => {
     }
   }
 
-  const chargeReceipt = registerExit(pendingExitIndex, customCharge);
-  closeExitModal();
-
-  if (chargeReceipt) {
-    openChargeModal(chargeReceipt);
+  try {
+    const chargeReceipt = await registerExit(pendingExitIndex, customCharge);
+    closeExitModal();
+    if (chargeReceipt) openChargeModal(chargeReceipt);
+  } catch (error) {
+    plateMessage.textContent = error.message || 'No fue posible registrar la salida en el servidor.';
   }
 });
 
@@ -597,9 +617,9 @@ deleteModal.addEventListener("click", (event) => {
   }
 });
 
-deleteForm.addEventListener("submit", (event) => {
+deleteForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  confirmDeleteWithRoleCheck(developerPasswordInput.value);
+  await confirmDeleteWithRoleCheck(developerPasswordInput.value);
 });
 
 logoutButton.addEventListener("click", () => {
@@ -627,7 +647,7 @@ if (manageUsersLink) {
 
 renderWelcomeMessage();
 
-plateForm.addEventListener("submit", (event) => {
+plateForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!placaInput.value.trim()) {
@@ -665,8 +685,18 @@ plateForm.addEventListener("submit", (event) => {
     user:         MPTStorage.getActiveUserName(),
   };
 
-  records.unshift(plateRecord);
-  MPTStorage.saveRecords(records);
+  try {
+    if (MPTStorage.hasJwtSession()) {
+      const persisted = await MPTStorage.createTurn(plateRecord);
+      plateRecord.ticketNumber = persisted.ticketNumber;
+    } else {
+      records.unshift(plateRecord);
+      MPTStorage.saveRecords(records);
+    }
+  } catch (error) {
+    plateMessage.textContent = error.message || 'No fue posible guardar el turno en el servidor.';
+    return;
+  }
   renderRecords();
 
   plateMessage.textContent = `${formatTicket(plateRecord.ticketNumber)} generado para ${plate} con tarifa ${formatCurrency(selectedVehicle.price)}.`;
@@ -675,4 +705,10 @@ plateForm.addEventListener("submit", (event) => {
     input.checked = false;
   });
   placaInput.focus();
+});
+
+window.addEventListener('mpt:storage-hydrated', () => {
+  migrateTicketNumbers();
+  renderRecords();
+  renderWelcomeMessage();
 });

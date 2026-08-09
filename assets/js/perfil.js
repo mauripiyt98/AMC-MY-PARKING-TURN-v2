@@ -67,9 +67,15 @@ async function loadProfile() {
   if (hasBackendSession()) {
     try {
       const tenantId = MPTStorage.getActiveTenantId();
-      const { parqueadero } = await requestProfile(`/parqueaderos/${tenantId}`);
+      const [{ parqueadero }, { usuario }] = await Promise.all([
+        requestProfile(`/parqueaderos/${tenantId}`),
+        requestProfile('/auth/me'),
+      ]);
       profile = {
         ...profile,
+        nombreUsuario: usuario.nombre || profile.nombreUsuario,
+        documento: usuario.documento || profile.documento,
+        correo: usuario.email || profile.correo,
         nombreComercial: parqueadero.nombre || profile.nombreComercial,
         ciudad: parqueadero.ciudad || profile.ciudad,
         departamento: parqueadero.departamento || profile.departamento,
@@ -114,16 +120,22 @@ profileForm.addEventListener('submit', async (event) => {
   try {
     if (hasBackendSession()) {
       const tenantId = MPTStorage.getActiveTenantId();
-      await requestProfile(`/parqueaderos/${tenantId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          nombre: profile.nombreComercial,
-          ciudad: profile.ciudad,
-          departamento: profile.departamento,
-          email: profile.correo,
-          direccion: profile.direccion,
+      await Promise.all([
+        requestProfile(`/parqueaderos/${tenantId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            nombre: profile.nombreComercial,
+            ciudad: profile.ciudad,
+            departamento: profile.departamento,
+            email: profile.correo,
+            direccion: profile.direccion,
+          }),
         }),
-      });
+        requestProfile('/auth/me', {
+          method: 'PATCH',
+          body: JSON.stringify({ nombre: profile.nombreUsuario, email: profile.correo }),
+        }),
+      ]);
     }
 
     MPTStorage.saveParkingProfile(profile);

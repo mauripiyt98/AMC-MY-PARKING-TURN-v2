@@ -16,6 +16,7 @@
 
 // ── URL del backend ────────────────────────────────────────────
 const API_BASE = window.MPT_API_BASE || '/api';
+let remoteHydration = null;
 
 // ============================================================
 // SECCION 1 — SESION Y TENANT
@@ -195,6 +196,106 @@ function _localGet(key) {
 
 function _localSet(key, value) {
   localStorage.setItem(_buildKey(key), JSON.stringify(value));
+}
+
+function _replaceLocal(key, value) {
+  _localSet(key, value);
+}
+
+async function apiRequest(path, options = {}) {
+  const token = getSessionToken();
+  if (!hasJwtSession() || !token) throw new Error('La sesión segura no está disponible. Inicia sesión nuevamente.');
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.message || 'No fue posible sincronizar con el servidor.');
+  return data;
+}
+
+/**
+ * Descarga la fuente de verdad PostgreSQL para el tenant autenticado.
+ * localStorage queda solamente como caché de interfaz/offline; no se usa para
+ * compartir información entre equipos.
+ */
+function hydrateFromServer() {
+  if (!hasJwtSession()) return Promise.resolve(false);
+  if (!remoteHydration) {
+    remoteHydration = apiRequest('/operacion/estado')
+      .then((state) => {
+        _replaceLocal(KEYS.plateRecords, state.records || []);
+        _replaceLocal(KEYS.plateHistory, state.history || []);
+        _replaceLocal(KEYS.monthlyRecords, state.monthlyRecords || []);
+        _replaceLocal(KEYS.monthlyHistory, state.monthlyHistory || []);
+        const nextTurn = Math.max(0, ...(state.records || []), ...(state.history || [])
+          .map((record) => Number(record.ticketNumber) || 0)) + 1;
+        const nextMonthly = Math.max(0, ...(state.monthlyRecords || []), ...(state.monthlyHistory || [])
+          .map((record) => Number(record.ticketNumber) || 0)) + 1;
+        _replaceLocal(KEYS.nextTicket, nextTurn);
+        _replaceLocal(KEYS.monthlyTicket, nextMonthly);
+        window.dispatchEvent(new CustomEvent('mpt:storage-hydrated'));
+        return true;
+      })
+      .catch((error) => {
+        console.warn('[MPT] No se pudo cargar la operación remota:', error.message);
+        return false;
+      });
+  }
+  return remoteHydration;
+}
+
+async function createTurn(record) {
+  const data = await apiRequest('/operacion/turnos', { method: 'POST', body: JSON.stringify(record) });
+  const records = getRecords();
+  records.unshift(data.record);
+  saveRecords(records);
+  saveNextTicketNumber(Math.max(getStoredNextTicketNumber(), Number(data.record.ticketNumber) + 1));
+  return data.record;
+}
+
+async function closeTurn(id, charge) {
+  const data = await apiRequest(`/operacion/turnos/${encodeURIComponent(id)}/salida`, { method: 'POST', body: JSON.stringify(charge) });
+  const records = getRecords().filter((record) => record.id !== id);
+  const history = getHistory().filter((record) => record.id !== id);
+  history.unshift(data.record);
+  saveRecords(records);
+  saveHistory(history);
+  return data.record;
+}
+
+async function deleteTurn(id) {
+  await apiRequest(`/operacion/turnos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  saveRecords(getRecords().filter((record) => record.id !== id));
+  saveHistory(getHistory().filter((record) => record.id !== id));
+}
+
+async function createMonthly(record) {
+  const data = await apiRequest('/operacion/mensualidades', { method: 'POST', body: JSON.stringify(record) });
+  const records = getMonthlyRecords();
+  records.unshift(data.record);
+  saveMonthlyRecords(records);
+  saveNextMonthlyTicket(Math.max(getStoredNextMonthlyTicket(), Number(data.record.ticketNumber) + 1));
+  return data.record;
+}
+
+async function closeMonthly(id, reason = 'CIERRE MANUAL') {
+  const data = await apiRequest(`/operacion/mensualidades/${encodeURIComponent(id)}/cerrar`, { method: 'POST', body: JSON.stringify({ reason }) });
+  saveMonthlyRecords(getMonthlyRecords().filter((record) => record.id !== id));
+  const history = getMonthlyHistory().filter((record) => record.id !== id);
+  history.unshift(data.record);
+  saveMonthlyHistory(history);
+  return data.record;
+}
+
+async function deleteMonthly(id) {
+  await apiRequest(`/operacion/mensualidades/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  saveMonthlyRecords(getMonthlyRecords().filter((record) => record.id !== id));
+  saveMonthlyHistory(getMonthlyHistory().filter((record) => record.id !== id));
 }
 
 // ============================================================
@@ -420,6 +521,7 @@ window.MPTStorage = {
   getActiveUserRole,
   getActiveCodigoParqueadero,
   getSessionToken,
+  apiRequest,
   hasJwtSession,
   hasActiveSession,
   saveSession,
@@ -431,6 +533,10 @@ window.MPTStorage = {
   saveHistory,
   getStoredNextTicketNumber,
   saveNextTicketNumber,
+  hydrateFromServer,
+  createTurn,
+  closeTurn,
+  deleteTurn,
   // Mensualidades
   getMonthlyRecords,
   saveMonthlyRecords,
@@ -438,6 +544,9 @@ window.MPTStorage = {
   saveMonthlyHistory,
   getStoredNextMonthlyTicket,
   saveNextMonthlyTicket,
+  createMonthly,
+  closeMonthly,
+  deleteMonthly,
   // Perfil del parqueadero
   getParkingProfile,
   saveParkingProfile,
@@ -453,3 +562,7 @@ window.MPTStorage = {
   findUserById,
   findUserByEmail,
 };
+
+// Inicia la carga sin bloquear la interfaz. Cada página vuelve a renderizar al
+// recibir el evento `mpt:storage-hydrated`.
+hydrateFromServer();
