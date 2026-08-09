@@ -1,0 +1,611 @@
+/* ============================================================
+   soporte.css — Módulo de Soporte / My Parking Turn v2
+   ============================================================ */
+
+/* ── Layout principal ── */
+.screen-soporte {
+  justify-content: flex-start;
+  padding-block: 38px 60px;
+}
+
+/* ── Header ── */
+.soporte-header {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  width: min(94vw, 900px);
+  margin: 0 auto 24px;
+}
+
+.soporte-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 800;
+  transition: color 0.15s;
+}
+
+.soporte-back-link:hover,
+.soporte-back-link:focus-visible {
+  color: var(--color-red-dark);
+}
+
+.soporte-logo {
+  width: 82px;
+  height: auto;
+  filter: drop-shadow(0 8px 14px rgba(32, 36, 42, 0.12));
+}
+
+.soporte-eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.soporte-header h1 {
+  margin: 0;
+  color: var(--color-red-dark);
+  font-size: clamp(27px, 4vw, 34px);
+  font-weight: 900;
+}
+
+.soporte-header h1 + p {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── Panel principal ── */
+.soporte-panel {
+  position: relative;
+  width: min(94vw, 900px);
+  overflow: hidden;
+  border: var(--border-strong);
+  border-radius: 10px;
+  padding: 38px clamp(20px, 5vw, 48px) 44px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-panel);
+}
+
+.soporte-panel::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8px;
+  content: "";
+  background: linear-gradient(90deg, var(--color-red-dark), var(--color-red) 52%, var(--color-warning));
+}
+
+/* ── Heading del panel ── */
+.soporte-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 28px;
+}
+
+.soporte-panel-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: var(--color-red-dark);
+  background: var(--color-red-soft);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.soporte-panel h2 {
+  margin: 0;
+  color: var(--color-red-dark);
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.soporte-panel-heading p {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.soporte-required-mark {
+  color: var(--color-warning);
+}
+
+/* ── Formulario ── */
+.soporte-form {
+  display: grid;
+  gap: 28px;
+}
+
+/* ── Fieldsets ── */
+.soporte-fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+  margin: 0;
+  padding: 24px 22px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-panel);
+}
+
+.soporte-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+/* ── Campos ── */
+.soporte-field {
+  display: grid;
+  gap: 7px;
+}
+
+.soporte-field span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.soporte-field input,
+.soporte-field textarea {
+  width: 100%;
+  border: 1px solid #bfc7d0;
+  border-left: 5px solid var(--color-warning);
+  border-radius: 7px;
+  padding: 0 13px;
+  color: var(--color-ink);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  transition: border-color 0.15s, outline 0.15s;
+}
+
+.soporte-field input {
+  height: 46px;
+}
+
+.soporte-field input[readonly] {
+  cursor: not-allowed;
+  background: linear-gradient(180deg, #f4f7fa, #eef2f6);
+  color: var(--color-muted);
+  border-left-color: #bfc7d0;
+}
+
+.soporte-field input:focus:not([readonly]),
+.soporte-field textarea:focus {
+  border-color: var(--color-red);
+  border-left-color: var(--color-warning);
+  outline: 3px solid rgba(181, 31, 36, 0.15);
+  outline-offset: 0;
+}
+
+.soporte-field--full {
+  grid-column: 1 / -1;
+}
+
+/* ── Badges de modo de acceso ── */
+.soporte-guest-badge,
+.soporte-session-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.soporte-guest-badge {
+  background: rgba(244, 182, 63, 0.18);
+  color: #92610a;
+  border: 1px solid rgba(244, 182, 63, 0.5);
+}
+
+.soporte-session-badge {
+  background: rgba(23, 113, 58, 0.12);
+  color: #17713a;
+  border: 1px solid rgba(23, 113, 58, 0.3);
+}
+
+/* En modo guest los campos son editables — recuperar estilo normal */
+.soporte-field input:not([readonly]) {
+  cursor: text;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  color: var(--color-ink);
+  border-left-color: var(--color-warning);
+}
+
+
+/* ── Textarea ── */
+.soporte-textarea-title {
+  display: block;
+  color: var(--color-ink) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.soporte-field textarea {
+  height: auto;
+  padding: 12px 13px;
+  resize: vertical;
+  min-height: 130px;
+  line-height: 1.6;
+}
+
+.soporte-char-count {
+  justify-self: end;
+  color: var(--color-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+/* ── Caja de información ── */
+.soporte-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1px solid #bbd6f7;
+  border-left: 5px solid #3b82f6;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.06), transparent 60%);
+  color: var(--color-ink);
+}
+
+.soporte-info-box svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #3b82f6;
+}
+
+.soporte-info-box p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.soporte-info-box a {
+  color: var(--color-red-dark);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+/* ── Mensaje de error ── */
+.soporte-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--color-red-dark);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.soporte-message.is-success {
+  color: #17713a;
+}
+
+/* ── Botón ENVIAR SOLICITUD ── */
+.soporte-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: min(100%, 320px);
+  justify-self: center;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  padding: 14px 32px;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.soporte-send-btn:hover:not(:disabled),
+.soporte-send-btn:focus-visible:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(127, 21, 25, 0.28);
+}
+
+.soporte-send-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ════════════════════════════════
+   MODAL — Overlay común
+   ════════════════════════════════ */
+.soporte-modal-overlay .modal-box {
+  max-width: 680px;
+  width: min(94vw, 680px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* ── Header del modal ── */
+.soporte-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 20px;
+}
+
+.soporte-modal-logo {
+  width: 56px;
+  height: auto;
+}
+
+.soporte-modal-header h2 {
+  margin: 0;
+  color: var(--color-red-dark);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+/* ── Badge de radicado ── */
+.soporte-ticket-badge {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 18px 24px;
+  border: 2px dashed var(--color-warning);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(244, 182, 63, 0.1), rgba(244, 182, 63, 0.04));
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.soporte-ticket-label {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.soporte-ticket-number {
+  display: block;
+  color: var(--color-red-dark);
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.soporte-ticket-date {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Secciones de preview ── */
+.soporte-preview-section {
+  margin-bottom: 18px;
+}
+
+.soporte-preview-section-title {
+  margin: 0 0 12px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 6px;
+}
+
+.soporte-preview-dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin: 0;
+}
+
+.soporte-preview-dl div {
+  display: grid;
+  gap: 3px;
+}
+
+.soporte-preview-dl dt {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.soporte-preview-dl dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+/* ── Descripción en preview ── */
+.soporte-preview-descripcion {
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-left: 5px solid var(--color-warning);
+  border-radius: 7px;
+  background: var(--color-panel);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Mensaje institucional en preview ── */
+.soporte-preview-info {
+  padding: 14px 18px;
+  border: 1px solid #bbd6f7;
+  border-left: 5px solid #3b82f6;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.06), transparent 60%);
+  margin-top: 16px;
+  margin-bottom: 10px;
+}
+
+.soporte-preview-info p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.8;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+/* ── Estado de envío ── */
+.soporte-send-status {
+  min-height: 24px;
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+.soporte-send-status.sending {
+  color: #3b82f6;
+}
+
+.soporte-send-status.error {
+  color: var(--color-red-dark);
+}
+
+/* ── Acciones del modal ── */
+.soporte-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.soporte-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  min-width: 200px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.soporte-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  min-width: 140px;
+  margin: 0;
+  font-size: 15px;
+}
+
+/* ── Modal de éxito ── */
+.soporte-success-box {
+  text-align: center;
+  padding: 44px 36px 36px;
+}
+
+.soporte-success-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+  animation: soporte-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes soporte-pop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.soporte-success-title {
+  margin: 0 0 14px;
+  color: var(--color-red-dark);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.soporte-success-msg {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.soporte-success-sub {
+  margin: 0 0 26px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.soporte-ok-btn {
+  min-width: 200px;
+  margin: 0 auto;
+}
+
+/* ── Responsive ── */
+@media (max-width: 650px) {
+  .screen-soporte {
+    padding-top: 24px;
+  }
+
+  .soporte-header {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+  }
+
+  .soporte-back-link {
+    grid-column: 1 / -1;
+  }
+
+  .soporte-logo {
+    width: 62px;
+  }
+
+  .soporte-fieldset {
+    grid-template-columns: 1fr;
+    padding: 20px 16px;
+  }
+
+  .soporte-field--full {
+    grid-column: auto;
+  }
+
+  .soporte-preview-dl {
+    grid-template-columns: 1fr;
+  }
+
+  .soporte-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .soporte-confirm-btn,
+  .soporte-cancel-btn {
+    width: 100%;
+  }
+}

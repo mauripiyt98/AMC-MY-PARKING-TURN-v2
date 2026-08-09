@@ -10,6 +10,7 @@ const profileFields = {
   ciudad: document.getElementById('profileCity'),
   departamento: document.getElementById('profileDepartment'),
   correo: document.getElementById('profileEmail'),
+  celular: document.getElementById('profileCelular'),
   direccion: document.getElementById('profileAddress'),
 };
 
@@ -43,6 +44,7 @@ function fillProfile(profile) {
   profileFields.ciudad.value = profile.ciudad || '';
   profileFields.departamento.value = profile.departamento || '';
   profileFields.correo.value = profile.correo || '';
+  profileFields.celular.value = profile.celular || '';
   profileFields.direccion.value = profile.direccion || '';
 }
 
@@ -98,8 +100,10 @@ profileForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const profile = getProfileFromForm();
 
-  if (!Object.values(profile).every(Boolean)) {
-    showProfileMessage('Completa todos los campos para guardar tu perfil.');
+  // Campos obligatorios (celular es opcional)
+  const requiredFields = ['nombreUsuario', 'documento', 'nombreComercial', 'ciudad', 'departamento', 'correo', 'direccion'];
+  if (!requiredFields.every((key) => Boolean(profile[key]))) {
+    showProfileMessage('Completa todos los campos obligatorios para guardar tu perfil.');
     return;
   }
   if (!/^\d{5,20}$/.test(profile.documento)) {

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Soporte | My Parking Turn</title>
+    <meta name="description" content="Formulario de soporte técnico y atención al cliente de My Parking Turn.">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/soporte.css">
+  </head>
+  <body>
+    <main class="screen screen-soporte">
+
+      <!-- ── Header ── -->
+      <header class="soporte-header">
+        <a id="soporteBackLink" class="soporte-back-link" href="../../index.html" aria-label="Volver">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          VOLVER
+        </a>
+        <img class="soporte-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+        <div>
+          <p class="soporte-eyebrow">CENTRO DE AYUDA</p>
+          <h1>SOPORTE</h1>
+          <p>Diligencia el formulario y nuestro equipo te contactará pronto.</p>
+        </div>
+      </header>
+
+      <!-- ── Panel principal ── -->
+      <section class="soporte-panel" aria-labelledby="soporteFormTitle">
+
+        <!-- Cabecera del panel -->
+        <div class="soporte-panel-heading">
+          <span class="soporte-panel-icon" aria-hidden="true">🎧</span>
+          <div>
+            <h2 id="soporteFormTitle">SOLICITUD DE SOPORTE</h2>
+            <p>Los campos marcados con <span class="soporte-required-mark">★</span> se cargan automáticamente de tu perfil.</p>
+          </div>
+        </div>
+
+        <form id="soporteForm" class="soporte-form" novalidate>
+
+          <!-- ── Datos del cliente (auto-cargados) ── -->
+          <fieldset class="soporte-fieldset">
+            <legend class="soporte-legend">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              DATOS DEL SOLICITANTE
+            </legend>
+
+            <label class="soporte-field">
+              <span>NOMBRE COMPLETO <span class="soporte-required-mark">★</span></span>
+              <input id="soporteNombre" name="nombreCompleto" type="text" autocomplete="name" maxlength="150" readonly required>
+            </label>
+
+            <label class="soporte-field">
+              <span>NÚMERO DE IDENTIFICACIÓN <span class="soporte-required-mark">★</span></span>
+              <input id="soporteDocumento" name="identificacion" type="text" autocomplete="off" maxlength="20" readonly required>
+            </label>
+
+            <label class="soporte-field">
+              <span>CORREO ELECTRÓNICO <span class="soporte-required-mark">★</span></span>
+              <input id="soporteCorreo" name="correo" type="email" autocomplete="email" maxlength="150" readonly required>
+            </label>
+
+            <label class="soporte-field">
+              <span>NÚMERO DE CELULAR <span class="soporte-required-mark">★</span></span>
+              <input id="soporteCelular" name="celular" type="tel" autocomplete="tel" maxlength="20" readonly required>
+            </label>
+          </fieldset>
+
+          <!-- ── Solicitud ── -->
+          <fieldset class="soporte-fieldset">
+            <legend class="soporte-legend">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              DESCRIPCIÓN DE LA SOLICITUD
+            </legend>
+
+            <label class="soporte-field soporte-field--full">
+              <span class="soporte-textarea-title">DESCRIBE UN RESUMEN CORTO DE TU SOLICITUD O REQUERIMIENTO</span>
+              <textarea
+                id="soporteDescripcion"
+                name="descripcion"
+                rows="6"
+                maxlength="1000"
+                placeholder="Ej.: Necesito ayuda para restablecer mi contraseña / Tengo un problema con el registro de turnos..."
+                required
+              ></textarea>
+              <span class="soporte-char-count"><span id="charCount">0</span> / 1000 caracteres</span>
+            </label>
+          </fieldset>
+
+          <!-- ── Mensaje predeterminado ── -->
+          <div class="soporte-info-box soporte-field--full">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p>
+              EL EQUIPO DE SOPORTE SE CONTACTARÁ PRONTAMENTE CONTIGO.<br>
+              PARA MÁS INFORMACIÓN ESCRÍBENOS A
+              <a href="mailto:servicios@amcparqueadero.online">servicios@amcparqueadero.online</a>
+            </p>
+          </div>
+
+          <!-- ── Mensaje de validación ── -->
+          <p id="soporteMessage" class="soporte-message soporte-field--full" role="alert" aria-live="polite"></p>
+
+          <!-- ── Botón enviar ── -->
+          <button id="btnEnviarSolicitud" class="primary-action soporte-send-btn soporte-field--full" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            ENVIAR SOLICITUD
+          </button>
+
+        </form>
+      </section>
+    </main>
+
+    <!-- ════════════════════════════════════════
+         MODAL: Previsualización de la solicitud
+         ════════════════════════════════════════ -->
+    <div id="previewModal" class="modal-overlay soporte-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle" hidden>
+      <section class="modal-box soporte-modal-box">
+
+        <!-- Encabezado del modal -->
+        <div class="soporte-modal-header">
+          <img class="soporte-modal-logo" src="../../assets/img/LOGOMPT.png" alt="Logo My Parking Turn">
+          <div>
+            <p class="soporte-eyebrow">MY PARKING TURN — SOPORTE</p>
+            <h2 id="previewModalTitle">PREVISUALIZACIÓN DE SOLICITUD</h2>
+          </div>
+        </div>
+
+        <!-- Número de radicado -->
+        <div class="soporte-ticket-badge">
+          <span class="soporte-ticket-label">NÚMERO DE RADICADO</span>
+          <strong id="previewTicketNumber" class="soporte-ticket-number">TICKET00000</strong>
+          <span class="soporte-ticket-date" id="previewFecha"></span>
+        </div>
+
+        <!-- Datos del solicitante -->
+        <div class="soporte-preview-section">
+          <h3 class="soporte-preview-section-title">DATOS DEL SOLICITANTE</h3>
+          <dl class="soporte-preview-dl">
+            <div><dt>NOMBRE COMPLETO</dt><dd id="pvNombre">—</dd></div>
+            <div><dt>IDENTIFICACIÓN</dt><dd id="pvDocumento">—</dd></div>
+            <div><dt>CORREO ELECTRÓNICO</dt><dd id="pvCorreo">—</dd></div>
+            <div><dt>CELULAR</dt><dd id="pvCelular">—</dd></div>
+          </dl>
+        </div>
+
+        <!-- Descripción de la solicitud -->
+        <div class="soporte-preview-section">
+          <h3 class="soporte-preview-section-title">RESUMEN DE LA SOLICITUD</h3>
+          <div class="soporte-preview-descripcion" id="pvDescripcion"></div>
+        </div>
+
+        <!-- Mensaje institucional -->
+        <div class="soporte-preview-info">
+          <p>EL EQUIPO DE SOPORTE SE CONTACTARÁ PRONTAMENTE CONTIGO.<br>
+          PARA MÁS INFORMACIÓN ESCRÍBENOS A <strong>servicios@amcparqueadero.online</strong></p>
+        </div>
+
+        <!-- Estado del envío -->
+        <p id="previewSendStatus" class="soporte-send-status" aria-live="polite"></p>
+
+        <!-- Acciones -->
+        <div class="modal-actions soporte-modal-actions">
+          <button id="btnConfirmarEnvio" class="primary-action soporte-confirm-btn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            CONFIRMAR Y ENVIAR
+          </button>
+          <button id="btnCerrarPreview" class="secondary-action soporte-cancel-btn" type="button">CANCELAR</button>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         MODAL: Envío exitoso
+         ════════════════════════════════════════ -->
+    <div id="successModal" class="modal-overlay soporte-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="successModalTitle" hidden>
+      <section class="modal-box soporte-success-box">
+        <div class="soporte-success-icon" aria-hidden="true">✅</div>
+        <h2 id="successModalTitle" class="soporte-success-title">¡SOLICITUD ENVIADA!</h2>
+        <p class="soporte-success-msg">
+          Tu solicitud fue registrada con el número de radicado:<br>
+          <strong id="successTicketDisplay" class="soporte-ticket-number"></strong>
+        </p>
+        <p class="soporte-success-sub">
+          El equipo de soporte se contactará prontamente contigo.<br>
+          Revisa tu bandeja de entrada en <strong>servicios@amcparqueadero.online</strong>
+        </p>
+        <button id="btnCerrarExito" class="primary-action soporte-ok-btn" type="button">ACEPTAR</button>
+      </section>
+    </div>
+
+    <!-- ── Scripts ── -->
+    <script src="../../assets/js/storage.js"></script>
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="../../assets/js/soporte.js"></script>
+  </body>
+</html>
