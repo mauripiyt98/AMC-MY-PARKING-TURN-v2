@@ -41,10 +41,37 @@ const welcomeMessage       = document.querySelector("#welcomeMessage");
 let pendingExitIndex = null;
 let pendingDelete    = null;
 
-function renderWelcomeMessage() {
+async function renderWelcomeMessage() {
   if (!welcomeMessage) return;
-  const profile = MPTStorage.getParkingProfile();
-  const commercialName = String(profile?.nombreComercial || '').trim();
+
+  const profile = MPTStorage.getParkingProfile() || {};
+  let commercialName = String(profile?.nombreComercial || '').trim();
+
+  if (MPTStorage.hasJwtSession()) {
+    try {
+      const tenantId = MPTStorage.getActiveTenantId();
+
+      if (tenantId) {
+        const data = await MPTStorage.apiRequest(
+          `/parqueaderos/${encodeURIComponent(tenantId)}`
+        );
+
+        const serverName = String(data?.parqueadero?.nombre || '').trim();
+
+        if (serverName) {
+          commercialName = serverName;
+
+          MPTStorage.saveParkingProfile({
+            ...profile,
+            nombreComercial: serverName,
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('[MPT] No se pudo sincronizar el nombre del parqueadero:', error.message);
+    }
+  }
+
   welcomeMessage.textContent = commercialName
     ? `BIENVENIDO ${commercialName.toUpperCase()}`
     : 'BIENVENIDO';
