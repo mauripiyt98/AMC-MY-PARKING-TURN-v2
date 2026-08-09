@@ -247,25 +247,9 @@ function getPeriodLabel() {
   return "TODOS LOS HISTORICOS";
 }
 
-function groupRowsByMonth(rows) {
-  return rows.reduce((groups, record) => {
-    const monthKey = `${record.reportDate.getFullYear()}-${String(record.reportDate.getMonth() + 1).padStart(2, "0")}`;
-
-    if (!groups.has(monthKey)) {
-      groups.set(monthKey, {
-        monthDate: new Date(record.reportDate.getFullYear(), record.reportDate.getMonth(), 1),
-        records: [],
-      });
-    }
-
-    groups.get(monthKey).records.push(record);
-    return groups;
-  }, new Map());
-}
-
-function renderMonthlyTable(group) {
-  const monthTotal = group.records.reduce((total, record) => total + Number(record.totalCharged || 0), 0);
-  const rows = group.records
+function renderHistoryTable(rows) {
+  const tableRows = rows
+    .sort((first, second) => second.reportDate - first.reportDate)
     .map((record) => {
       const hourlyPrice  = Number(record.hourlyPrice || 0);
       const totalCharged = Number(record.totalCharged || 0);
@@ -294,49 +278,41 @@ function renderMonthlyTable(group) {
     .join("");
 
   return `
-    <section class="month-report">
-      <header>
-        <h3>${formatMonthForDisplay(group.monthDate)}</h3>
-        <p>${group.records.length} tickets | ${formatCurrency(monthTotal)}</p>
-      </header>
-      <div class="records-table-wrap">
-        <table class="records-table">
-          <thead>
-            <tr>
-              <th scope="col">TICKET</th>
-              <th scope="col">PLACA</th>
-              <th scope="col">HORA INGRESO</th>
-              <th scope="col">HORA SALIDA</th>
-              <th scope="col">FECHA</th>
-              <th scope="col">PRECIO HORA</th>
-              <th scope="col">TOTAL COBRADO</th>
-              <th scope="col">HORAS</th>
-              <th scope="col">ELIMINAR</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </section>
+    <div class="records-table-wrap report-table-wrap" tabindex="0" aria-label="Listado de turnos historicos">
+      <table class="records-table report-history-table">
+        <thead>
+          <tr>
+            <th scope="col">TICKET</th>
+            <th scope="col">PLACA</th>
+            <th scope="col">HORA INGRESO</th>
+            <th scope="col">HORA SALIDA</th>
+            <th scope="col">FECHA</th>
+            <th scope="col">PRECIO HORA</th>
+            <th scope="col">TOTAL COBRADO</th>
+            <th scope="col">HORAS TOTALES</th>
+            <th scope="col">ELIMINAR</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
   `;
 }
 
 function renderReport() {
   const rows          = getFilteredRows();
   const totalCharged  = rows.reduce((total, record) => total + Number(record.totalCharged || 0), 0);
-  const monthlyGroups = [...groupRowsByMonth(rows).values()].sort((a, b) => b.monthDate - a.monthDate);
-
   summaryPeriod.textContent  = getPeriodLabel();
   summaryTickets.textContent = String(rows.length);
   summaryTotal.textContent   = formatCurrency(totalCharged);
 
   if (rows.length === 0) {
     monthlyReports.innerHTML = `
-      <div class="records-table-wrap">
-        <table class="records-table">
+      <div class="records-table-wrap report-table-wrap">
+        <table class="records-table report-history-table">
           <tbody>
             <tr class="empty-record">
-              <td>NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
+              <td colspan="9">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
             </tr>
           </tbody>
         </table>
@@ -345,7 +321,7 @@ function renderReport() {
     return;
   }
 
-  monthlyReports.innerHTML = monthlyGroups.map(renderMonthlyTable).join("");
+  monthlyReports.innerHTML = renderHistoryTable(rows);
 }
 
 // ================================================================
