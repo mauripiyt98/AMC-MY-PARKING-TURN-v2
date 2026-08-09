@@ -296,10 +296,63 @@ a {
   text-transform: uppercase;
 }
 
+/* La contraseña NO debe transformarse a mayúsculas visualmente */
+#contrasena {
+  text-transform: none;
+}
+
 .field input:focus {
   border-color: var(--color-red);
   outline: 3px solid rgba(181, 31, 36, 0.15);
   outline-offset: 0;
+}
+
+/* Envoltorio del campo contraseña + botón ojo */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(100%, 260px);
+}
+
+.password-wrap #contrasena {
+  width: 100%;
+  padding-right: 44px; /* espacio para el botón */
+}
+
+.eye-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--color-muted);
+  transition: color 0.15s, background 0.15s;
+  /* Evitar que se seleccione texto al mantener presionado */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.eye-btn:hover,
+.eye-btn:focus-visible {
+  color: var(--color-red-dark);
+  background: rgba(181, 31, 36, 0.07);
+  outline: none;
+}
+
+.eye-btn--open {
+  color: var(--color-red-dark);
+  background: rgba(181, 31, 36, 0.07);
 }
 
 .plate-field input {

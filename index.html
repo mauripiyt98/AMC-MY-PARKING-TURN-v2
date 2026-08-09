@@ -33,17 +33,29 @@
             >
           </label>
 
-          <label class="field">
-            <span>CONTRASENA</span>
-            <input
-              id="contrasena"
-              name="contrasena"
-              type="password"
-              autocomplete="current-password"
-              minlength="6"
-              placeholder="CONTRASEÑA"
-              required
-            >
+          <label class="field" id="field-contrasena">
+            <span>CONTRASEÑA</span>
+            <div class="password-wrap">
+              <input
+                id="contrasena"
+                name="contrasena"
+                type="password"
+                autocomplete="current-password"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                minlength="6"
+                placeholder="CONTRASEÑA"
+                required
+              >
+              <button
+                id="togglePassword"
+                class="eye-btn"
+                type="button"
+                aria-label="Mostrar contraseña"
+                tabindex="-1"
+              >👁️</button>
+            </div>
           </label>
 
           <p id="loginMessage" class="form-message" role="alert" aria-live="polite"></p>
@@ -59,5 +71,35 @@
     <!-- storage.js debe cargarse antes que auth.js -->
     <script src="assets/js/storage.js"></script>
     <script src="assets/js/auth.js"></script>
+
+    <!-- Ojo: mostrar contraseña mientras se mantiene presionado -->
+    <script>
+      (function () {
+        var btn = document.getElementById('togglePassword');
+        var inp = document.getElementById('contrasena');
+        if (!btn || !inp) return;
+
+        function show() {
+          inp.type = 'text';
+          btn.setAttribute('aria-label', 'Ocultar contraseña');
+          btn.classList.add('eye-btn--open');
+        }
+        function hide() {
+          inp.type = 'password';
+          btn.setAttribute('aria-label', 'Mostrar contraseña');
+          btn.classList.remove('eye-btn--open');
+        }
+
+        // Ratón
+        btn.addEventListener('mousedown', function (e) { e.preventDefault(); show(); });
+        btn.addEventListener('mouseup',   function () { hide(); });
+        btn.addEventListener('mouseleave', function () { hide(); });
+
+        // Táctil (móvil)
+        btn.addEventListener('touchstart', function (e) { e.preventDefault(); show(); }, { passive: false });
+        btn.addEventListener('touchend',    function (e) { e.preventDefault(); hide(); }, { passive: false });
+        btn.addEventListener('touchcancel', function () { hide(); });
+      })();
+    </script>
   </body>
 </html>
