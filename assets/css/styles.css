@@ -598,14 +598,11 @@ a {
 /* El reporte conserva todos sus controles y el listado se desplaza dentro
    de la pantalla, sin extender la pagina con los registros historicos. */
 body:has(.report-panel) {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 body:has(.report-panel) .screen-main {
-  height: 100vh;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 100vh;
   padding-block: 14px;
 }
 
@@ -614,9 +611,7 @@ body:has(.report-panel) .brand-logo {
 }
 
 body:has(.report-panel) .report-panel {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
+  display: block;
   flex-direction: column;
   margin-top: 12px;
   padding-bottom: 18px;
@@ -709,9 +704,8 @@ body:has(.report-panel) .report-panel {
   position: relative;
   z-index: 1;
   margin-top: 20px;
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
+  display: block;
+  height: clamp(1250px, 200vh, 2100px);
   overflow: hidden;
 }
 
