@@ -684,6 +684,15 @@ a {
   display: grid;
   gap: 20px;
   margin-top: 20px;
+  max-height: min(62vh, 650px);
+  overflow: auto;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.report-return-top {
+  margin: 18px auto 0;
 }
 
 .month-report {

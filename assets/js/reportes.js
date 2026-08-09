@@ -54,6 +54,25 @@ function formatTicket(ticketNumber) {
   return `TICKET ${ticketNumber || "SIN NUMERO"}`;
 }
 
+// Conserva la misma regla de cobro/horas del registro de turnos activos.
+function getCompletedHours(record) {
+  const savedHours = Number(record.chargedHours);
+
+  if (Number.isFinite(savedHours) && savedHours > 0) {
+    return savedHours;
+  }
+
+  const entryDate = new Date(record.entryIso);
+  const exitDate = new Date(record.exitIso);
+
+  if (Number.isNaN(entryDate.getTime()) || Number.isNaN(exitDate.getTime())) {
+    return 1;
+  }
+
+  const elapsedMilliseconds = Math.max(0, exitDate - entryDate);
+  return Math.floor(elapsedMilliseconds / 3600000) + 1;
+}
+
 function getHighestTicketNumber(records, history) {
   return [...records, ...history].reduce((highestTicket, record) => {
     const ticketNumber = Number(record.ticketNumber || 0);
@@ -251,6 +270,7 @@ function renderMonthlyTable(group) {
       const hourlyPrice  = Number(record.hourlyPrice || 0);
       const totalCharged = Number(record.totalCharged || 0);
       const originalTotal = record.originalTotalCharged !== undefined ? Number(record.originalTotalCharged) : totalCharged;
+      const completedHours = getCompletedHours(record);
       
       let displayTotal = formatCurrency(totalCharged);
       if (originalTotal !== totalCharged) {
@@ -266,6 +286,7 @@ function renderMonthlyTable(group) {
           <td>${formatDateForDisplay(record.reportDate)}</td>
           <td>${formatCurrency(hourlyPrice)}</td>
           <td>${displayTotal}</td>
+          <td>${completedHours}</td>
           <td><button class="delete-action" type="button" data-index="${record.originalIndex}">ELIMINAR</button></td>
         </tr>
       `;
@@ -289,6 +310,7 @@ function renderMonthlyTable(group) {
               <th scope="col">FECHA</th>
               <th scope="col">PRECIO HORA</th>
               <th scope="col">TOTAL COBRADO</th>
+              <th scope="col">HORAS</th>
               <th scope="col">ELIMINAR</th>
             </tr>
           </thead>
