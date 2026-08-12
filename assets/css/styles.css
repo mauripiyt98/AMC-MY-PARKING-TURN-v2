@@ -158,7 +158,7 @@ a {
 
 .operator-status {
   position: fixed;
-  top: 28px;
+  top: 12px;
   right: clamp(14px, 4vw, 64px);
   z-index: 90;
   display: grid;
@@ -216,6 +216,18 @@ a {
 
 .operator-locked .plate-panel { opacity: .58; }
 .operator-locked .plate-panel input, .operator-locked .plate-panel button { cursor: not-allowed; }
+
+/* En escritorio se reserva una columna para el panel fijo del operador,
+   evitando que se superponga sobre la tabla de turnos al hacer scroll. */
+@media (min-width: 1180px) {
+  .screen-main {
+    padding-right: 430px;
+  }
+
+  .screen-main .records-panel {
+    width: min(100%, 1020px);
+  }
+}
 
 .login-panel,
 .plate-panel,
