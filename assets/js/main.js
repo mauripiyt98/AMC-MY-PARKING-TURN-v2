@@ -27,6 +27,9 @@ const chargeExitTime       = document.querySelector("#chargeExitTime");
 const chargeTotal          = document.querySelector("#chargeTotal");
 const closeCharge          = document.querySelector("#closeCharge");
 const generatePdfButton    = document.querySelector("#generatePdfButton");
+const ticketPreviewModal   = document.querySelector("#ticketPreviewModal");
+const ticketPreviewDetails = document.querySelector("#ticketPreviewDetails");
+const closeTicketPreview   = document.querySelector("#closeTicketPreview");
 const deleteModal          = document.querySelector("#deleteModal");
 const deleteForm           = document.querySelector("#deleteForm");
 const developerPasswordInput = document.querySelector("#developerPassword");
@@ -371,12 +374,12 @@ function renderRecords() {
   recordsBody.innerHTML = "";
 
   if (records.length === 0) {
-    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="10">AUN NO HAY TURNOS REGISTRADOS</td></tr>';
+    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="12">AUN NO HAY TURNOS REGISTRADOS</td></tr>';
     return;
   }
 
   if (filteredRecords.length === 0) {
-    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="10">NO HAY TURNOS ACTIVOS PARA ESA PLACA</td></tr>';
+    recordsBody.innerHTML = '<tr class="empty-record"><td colspan="12">NO HAY TURNOS ACTIVOS PARA ESA PLACA</td></tr>';
     return;
   }
 
@@ -393,12 +396,27 @@ function renderRecords() {
       <td class="live-charge-cell" data-index="${index}"></td>
       <td class="live-hours-cell" data-index="${index}"></td>
       <td>${record.user}</td>
+      <td><button class="ticket-preview-action" type="button" data-index="${index}" aria-label="Ver ticket ${escapeHtml(record.ticketNumber)}">VER</button></td>
       <td><button class="exit-action" type="button" data-index="${index}">SALIDA</button></td>
       <td><button class="delete-action" type="button" data-type="active" data-index="${index}">ELIMINAR</button></td>
     `;
     recordsBody.appendChild(row);
   });
   updateLiveCharges();
+}
+
+function openActiveTicketPreview(record) {
+  const { chargedHours, totalCharged } = getExitCharge(record, new Date());
+  const details = [
+    ['TICKET', formatTicket(record.ticketNumber)], ['PLACA', record.plate],
+    ['VEHICULO', record.vehicleType || 'SIN DEFINIR'], ['FECHA INGRESO', record.date],
+    ['HORA INGRESO', record.time], ['TARIFA POR HORA', formatCurrency(record.hourlyPrice)],
+    ['HORAS ACTUALES', chargedHours], ['VALOR ACTUAL', formatCurrency(totalCharged)],
+    ['OPERADOR', record.user || 'SIN DATO'], ['ESTADO', 'ACTIVO'],
+  ];
+  ticketPreviewDetails.innerHTML = details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+  ticketPreviewModal.hidden = false;
+  closeTicketPreview.focus();
 }
 
 // ============================================================
@@ -643,6 +661,13 @@ activePlateFilterInput.addEventListener("input", () => {
 recordsBody.addEventListener("click", (event) => {
   const exitButton   = event.target.closest(".exit-action");
   const deleteButton = event.target.closest(".delete-action");
+  const previewButton = event.target.closest(".ticket-preview-action");
+
+  if (previewButton) {
+    const record = MPTStorage.getRecords()[Number(previewButton.dataset.index)];
+    if (record) openActiveTicketPreview(record);
+    return;
+  }
 
   if (deleteButton) {
     openDeleteModal(deleteButton.dataset.type, Number(deleteButton.dataset.index));
@@ -717,6 +742,8 @@ exitModal.addEventListener("click", (event) => {
 });
 
 closeCharge.addEventListener("click", closeChargeModal);
+closeTicketPreview.addEventListener('click', () => { ticketPreviewModal.hidden = true; });
+ticketPreviewModal.addEventListener('click', (event) => { if (event.target === ticketPreviewModal) ticketPreviewModal.hidden = true; });
 
 generatePdfButton.addEventListener("click", () => {
   plateMessage.textContent = "La generacion de PDF se conectara en una siguiente etapa.";

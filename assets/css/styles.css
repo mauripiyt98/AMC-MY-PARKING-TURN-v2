@@ -883,7 +883,7 @@ body:has(.report-panel) .report-panel {
 }
 
 .report-history-table {
-  min-width: 1050px !important;
+  min-width: 1140px !important;
 }
 
 .report-history-table thead th {
@@ -909,6 +909,7 @@ body:has(.report-panel) .report-panel {
 .records-col-live-charge { width: 9%; }
 .records-col-hours { width: 6%; }
 .records-col-user { width: 17%; }
+.records-col-preview { width: 7%; }
 .records-col-exit { width: 10%; }
 .records-col-delete { width: 10%; }
 
@@ -929,11 +930,27 @@ body:has(.report-panel) .report-panel {
 }
 
 .records-panel .exit-action,
-.records-panel .delete-action {
+.records-panel .delete-action,
+.ticket-preview-action {
   width: 100%;
   min-height: 36px;
   padding: 7px 5px;
   font-size: 11px;
+}
+
+.ticket-preview-action {
+  border: 1px solid #526b84;
+  border-radius: 6px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #607992, #405a73);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ticket-preview-action:hover,
+.ticket-preview-action:focus-visible {
+  background: linear-gradient(180deg, #405a73, #30475d);
+  box-shadow: 0 5px 12px rgba(48, 71, 93, .25);
 }
 
 
@@ -989,6 +1006,16 @@ body:has(.report-panel) .report-panel {
 
 .charge-modal-box {
   width: min(92vw, 500px);
+}
+
+.ticket-preview-box {
+  width: min(92vw, 520px);
+}
+
+.ticket-preview-details {
+  max-height: min(58vh, 510px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .charge-title {

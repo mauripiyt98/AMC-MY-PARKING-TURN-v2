@@ -72,6 +72,14 @@
       </section>
     </div>
 
+    <div id="ticketPreviewModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ticketPreviewTitle" hidden>
+      <section class="modal-box ticket-preview-box">
+        <h2 id="ticketPreviewTitle">VISTA DEL TICKET</h2>
+        <dl id="ticketPreviewDetails" class="charge-summary ticket-preview-details"></dl>
+        <div class="modal-actions"><button id="closeTicketPreview" class="secondary-action" type="button">CERRAR</button></div>
+      </section>
+    </div>
+
     <!-- session-guard.js debe ser el PRIMER script: bloquea acceso sin sesion -->
     <script src="../../assets/js/session-guard.js"></script>
     <script src="../../assets/js/storage.js"></script>

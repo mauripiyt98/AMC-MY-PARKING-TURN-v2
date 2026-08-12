@@ -23,6 +23,9 @@ const developerPasswordInput = document.querySelector("#developerPassword");
 const deleteMessage          = document.querySelector("#deleteMessage");
 const cancelDelete           = document.querySelector("#cancelDelete");
 const logoutButton           = document.querySelector("#logoutButton");
+const ticketPreviewModal     = document.querySelector("#ticketPreviewModal");
+const ticketPreviewDetails   = document.querySelector("#ticketPreviewDetails");
+const closeTicketPreview     = document.querySelector("#closeTicketPreview");
 
 // ===== Estado =====
 let pendingDeleteIndex = null;
@@ -52,6 +55,11 @@ function formatCurrency(value) {
 
 function formatTicket(ticketNumber) {
   return `TICKET ${ticketNumber || "SIN NUMERO"}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // Conserva la misma regla de cobro/horas del registro de turnos activos.
@@ -272,6 +280,7 @@ function renderHistoryTable(rows) {
           <td>${displayTotal}</td>
           <td>${completedHours}</td>
           <td>${record.operatorName || record.user || 'SIN DATO'}</td>
+          <td><button class="ticket-preview-action" type="button" data-index="${record.originalIndex}" aria-label="Ver ticket ${record.ticketNumber}">VER</button></td>
           <td><button class="delete-action" type="button" data-index="${record.originalIndex}">ELIMINAR</button></td>
         </tr>
       `;
@@ -292,6 +301,7 @@ function renderHistoryTable(rows) {
             <th scope="col">TOTAL COBRADO</th>
             <th scope="col">HORAS TOTALES</th>
             <th scope="col">OPERADOR</th>
+            <th scope="col">VER</th>
             <th scope="col">ELIMINAR</th>
           </tr>
         </thead>
@@ -314,7 +324,7 @@ function renderReport() {
         <table class="records-table report-history-table">
           <tbody>
             <tr class="empty-record">
-              <td colspan="10">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
+              <td colspan="11">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
             </tr>
           </tbody>
         </table>
@@ -324,6 +334,21 @@ function renderReport() {
   }
 
   monthlyReports.innerHTML = renderHistoryTable(rows);
+}
+
+function openHistoryTicketPreview(record) {
+  if (!record) return;
+  const details = [
+    ['TICKET', formatTicket(record.ticketNumber)], ['PLACA', record.plate],
+    ['VEHICULO', record.vehicleType || 'SIN DEFINIR'], ['FECHA', record.date || 'SIN DATO'],
+    ['HORA INGRESO', record.entryTime || 'SIN DATO'], ['HORA SALIDA', record.exitTime || 'SIN DATO'],
+    ['TARIFA POR HORA', formatCurrency(record.hourlyPrice)], ['HORAS COBRADAS', getCompletedHours(record)],
+    ['TOTAL COBRADO', formatCurrency(record.totalCharged)], ['OPERADOR', record.operatorName || record.user || 'SIN DATO'],
+    ['ESTADO', 'FINALIZADO'],
+  ];
+  ticketPreviewDetails.innerHTML = details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+  ticketPreviewModal.hidden = false;
+  closeTicketPreview.focus();
 }
 
 // ================================================================
@@ -391,6 +416,12 @@ clearReportFilter.addEventListener("click", () => {
 
 monthlyReports.addEventListener("click", (event) => {
   const deleteButton = event.target.closest(".delete-action");
+  const previewButton = event.target.closest('.ticket-preview-action');
+
+  if (previewButton) {
+    openHistoryTicketPreview(getHistory()[Number(previewButton.dataset.index)]);
+    return;
+  }
 
   if (!deleteButton) {
     return;
@@ -400,6 +431,8 @@ monthlyReports.addEventListener("click", (event) => {
 });
 
 cancelDelete.addEventListener("click", closeDeleteModal);
+closeTicketPreview.addEventListener('click', () => { ticketPreviewModal.hidden = true; });
+ticketPreviewModal.addEventListener('click', (event) => { if (event.target === ticketPreviewModal) ticketPreviewModal.hidden = true; });
 
 deleteModal.addEventListener("click", (event) => {
   if (event.target === deleteModal) {
