@@ -163,31 +163,32 @@ a {
   z-index: 90;
   display: grid;
   justify-items: center;
-  gap: 8px;
-  width: min(90vw, 350px);
-  border: 1px solid #d5dce4;
-  border-radius: 14px;
-  padding: 19px 20px 18px;
-  background: linear-gradient(150deg, #ffffff 0%, #f8fafc 100%);
-  box-shadow: 0 16px 34px rgba(20, 31, 45, 0.14);
+  gap: 10px;
+  width: min(90vw, 385px);
+  border: 2px solid #bac6d3;
+  border-top: 8px solid var(--color-red-dark);
+  border-radius: 16px;
+  padding: 21px 24px 22px;
+  background: linear-gradient(145deg, #ffffff 0%, #edf2f7 100%);
+  box-shadow: 0 20px 42px rgba(20, 31, 45, 0.2);
   text-align: center;
 }
 .operator-status-label {
-  color: #667487;
-  font-size: 11px;
+  color: #526173;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
 .operator-status strong {
   color: var(--color-red-dark);
-  font-size: clamp(18px, 1.5vw, 21px);
+  font-size: clamp(20px, 1.7vw, 24px);
   font-weight: 800;
   letter-spacing: 0.025em;
   line-height: 1.15;
 }
 .operator-status span:not(.operator-status-label) {
-  color: #6b7787;
-  font-size: 12px;
+  color: #536274;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.07em;
 }
@@ -195,16 +196,17 @@ a {
 .operator-status.is-active #activeOperatorState { color: #168a3a; }
 .operator-status-actions { display: flex; width: 100%; gap: 8px; margin-top: 7px; }
 .operator-status-actions button, .operator-options button {
-  border: 1px solid var(--color-red-dark); border-radius: 8px; padding: 12px 15px;
-  color: var(--color-white); background: var(--color-red-dark); font-size: 14px; font-weight: 800;
-  letter-spacing: 0.025em; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  border: 2px solid var(--color-red-dark); border-radius: 9px; padding: 13px 16px;
+  color: var(--color-white); background: linear-gradient(180deg, #a61c22, #7f1519); font-size: 15px; font-weight: 800;
+  letter-spacing: 0.04em; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .operator-status-actions button { width: 100%; }
 .operator-status-actions button:hover,
-.operator-status-actions button:focus-visible { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(127, 21, 25, .22); }
+.operator-status-actions button:focus-visible { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(127, 21, 25, .35); }
+.operator-status.is-active { border-top-color: #168a3a; }
 .operator-status.is-active .operator-status-actions #closeOperatorButton {
-  border-color: #168a3a;
-  background: #168a3a;
+  border-color: #147a34;
+  background: linear-gradient(180deg, #1c9a45, #147a34);
 }
 .operator-status.is-active .operator-status-actions #closeOperatorButton:hover,
 .operator-status.is-active .operator-status-actions #closeOperatorButton:focus-visible { box-shadow: 0 8px 16px rgba(22, 138, 58, .24); }
