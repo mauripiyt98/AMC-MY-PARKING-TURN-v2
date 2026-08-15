@@ -281,6 +281,7 @@ function renderHistoryTable(rows) {
           <td>${completedHours}</td>
           <td>${record.operatorName || record.user || 'SIN DATO'}</td>
           <td><button class="ticket-preview-action" type="button" data-index="${record.originalIndex}" aria-label="Ver ticket ${record.ticketNumber}">VER</button></td>
+          <td><button class="pdf-action ticket-download-action" type="button" data-index="${record.originalIndex}" aria-label="Descargar PDF del ticket ${record.ticketNumber}">PDF</button></td>
           <td><button class="delete-action" type="button" data-index="${record.originalIndex}">ELIMINAR</button></td>
         </tr>
       `;
@@ -302,6 +303,7 @@ function renderHistoryTable(rows) {
             <th scope="col">HORAS TOTALES</th>
             <th scope="col">OPERADOR</th>
             <th scope="col">VER</th>
+            <th scope="col">PDF</th>
             <th scope="col">ELIMINAR</th>
           </tr>
         </thead>
@@ -324,7 +326,7 @@ function renderReport() {
         <table class="records-table report-history-table">
           <tbody>
             <tr class="empty-record">
-              <td colspan="11">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
+              <td colspan="12">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td>
             </tr>
           </tbody>
         </table>
@@ -417,9 +419,18 @@ clearReportFilter.addEventListener("click", () => {
 monthlyReports.addEventListener("click", (event) => {
   const deleteButton = event.target.closest(".delete-action");
   const previewButton = event.target.closest('.ticket-preview-action');
+  const downloadButton = event.target.closest('.ticket-download-action');
 
   if (previewButton) {
     openHistoryTicketPreview(getHistory()[Number(previewButton.dataset.index)]);
+    return;
+  }
+
+  if (downloadButton) {
+    const record = getHistory()[Number(downloadButton.dataset.index)];
+    if (!record || !window.MPTTicketPdf) return;
+    const filename = window.MPTTicketPdf.download(record);
+    reportMessage.textContent = `PDF descargado localmente: ${filename}`;
     return;
   }
 

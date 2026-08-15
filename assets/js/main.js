@@ -55,6 +55,7 @@ const operatorCodeLabel    = document.querySelector("#operatorCodeLabel");
 let pendingExitIndex = null;
 let pendingDelete    = null;
 let pendingOperator = null;
+let pendingPdfTicket = null;
 
 async function renderWelcomeMessage() {
   if (!welcomeMessage) return;
@@ -545,9 +546,10 @@ function closeExitModal() {
 // ============================================================
 
 function openChargeModal(chargeReceipt) {
+  pendingPdfTicket = chargeReceipt;
   chargePlate.textContent     = chargeReceipt.plate;
   chargeDate.textContent      = chargeReceipt.date;
-  chargeEntryTime.textContent = chargeReceipt.entryTime;
+  chargeEntryTime.textContent = chargeReceipt.entryTime || chargeReceipt.time;
   chargeExitTime.textContent  = chargeReceipt.exitTime;
   chargeTotal.textContent     = formatCurrency(chargeReceipt.totalCharged);
   chargeModal.hidden = false;
@@ -555,6 +557,7 @@ function openChargeModal(chargeReceipt) {
 }
 
 function closeChargeModal() {
+  pendingPdfTicket = null;
   chargeModal.hidden = true;
   chargePlate.textContent     = "";
   chargeDate.textContent      = "";
@@ -584,12 +587,21 @@ async function registerExit(recordIndex, customCharge = null) {
   const originalTotalCharged = calculatedTotal;
 
   const chargeReceipt = {
+    id:         record.id,
+    ticketNumber: record.ticketNumber,
     plate:      record.plate,
     date:       record.date,
     entryTime:  record.time,
     exitTime,
     totalCharged: finalTotalCharged,
-    originalTotalCharged
+    originalTotalCharged,
+    hourlyPrice,
+    chargedHours,
+    vehicleType: record.vehicleType,
+    user: record.user,
+    operatorName: record.operatorName || record.user,
+    entryIso: record.entryIso,
+    exitIso: now.toISOString(),
   };
 
   const historyRecord = {
@@ -607,8 +619,9 @@ async function registerExit(recordIndex, customCharge = null) {
     originalTotalCharged
   };
 
+  let finalizedRecord = chargeReceipt;
   if (MPTStorage.hasJwtSession()) {
-    await MPTStorage.closeTurn(record.id, {
+    finalizedRecord = await MPTStorage.closeTurn(record.id, {
       chargedHours,
       totalCharged: finalTotalCharged,
       originalTotalCharged,
@@ -621,7 +634,7 @@ async function registerExit(recordIndex, customCharge = null) {
   }
   renderRecords();
   plateMessage.textContent = `Salida generada para ${record.plate}. Total cobrado: ${formatCurrency(finalTotalCharged)}.`;
-  return chargeReceipt;
+  return { ...chargeReceipt, ...finalizedRecord };
 }
 
 // ============================================================
@@ -746,7 +759,12 @@ closeTicketPreview.addEventListener('click', () => { ticketPreviewModal.hidden =
 ticketPreviewModal.addEventListener('click', (event) => { if (event.target === ticketPreviewModal) ticketPreviewModal.hidden = true; });
 
 generatePdfButton.addEventListener("click", () => {
-  plateMessage.textContent = "La generacion de PDF se conectara en una siguiente etapa.";
+  if (!pendingPdfTicket || !window.MPTTicketPdf) {
+    plateMessage.textContent = 'No hay un comprobante de salida disponible para descargar.';
+    return;
+  }
+  const filename = window.MPTTicketPdf.download(pendingPdfTicket);
+  plateMessage.textContent = `PDF descargado localmente: ${filename}`;
 });
 
 chargeModal.addEventListener("click", (event) => {

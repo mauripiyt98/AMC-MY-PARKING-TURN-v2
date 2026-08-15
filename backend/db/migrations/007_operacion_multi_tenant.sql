@@ -51,8 +51,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS mensualidades_placa_activa_unique
 CREATE INDEX IF NOT EXISTS mensualidades_tenant_estado_vencimiento_idx
     ON mensualidades(parqueadero_id, estado, fecha_vencimiento);
 
--- Metadatos de comprobantes PDF. El archivo se guarda en almacenamiento privado
--- (S3/MinIO/VPS), nunca como binario público en la carpeta del navegador.
+-- Tabla de metadatos heredada, sin uso por el flujo operativo actual.
+-- Los comprobantes PDF se generan y descargan localmente en el navegador;
+-- ningún flujo debe insertar aquí ni guardar PDFs o rutas de archivos en el servidor.
 CREATE TABLE IF NOT EXISTS documentos_generados (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     parqueadero_id UUID NOT NULL REFERENCES parqueaderos(id) ON DELETE RESTRICT,

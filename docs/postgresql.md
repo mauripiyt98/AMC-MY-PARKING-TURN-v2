@@ -35,8 +35,8 @@ información entre equipos.
 
 Cada parqueadero es un tenant (una fila de `parqueaderos`), no una carpeta del
 servidor. Sus datos se separan por `parqueadero_id` en `turnos`,
-`mensualidades`, `documentos_generados` (metadatos/llave privada de futuros
-PDF) y `auditoria_eventos`. RLS se habilita y fuerza para cada una. El backend
+`mensualidades`, `documentos_generados` (tabla heredada no usada por el flujo
+actual de PDF) y `auditoria_eventos`. RLS se habilita y fuerza para cada una. El backend
 obtiene el tenant únicamente del JWT y lo fija mediante `SET LOCAL`; el
 navegador nunca puede elegir ni enviar un tenant ajeno.
 
