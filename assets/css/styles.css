@@ -1744,6 +1744,29 @@ body:has(.report-panel) .report-panel {
   background: #202833 !important;
 }
 
+:root[data-theme="dark"] .profile-action-cta,
+:root[data-theme="dark"] .side-module-link,
+:root[data-theme="dark"] .side-actions-link,
+:root[data-theme="dark"] .side-actions button,
+:root[data-theme="dark"] .logout-action {
+  color: #f1f5f9;
+  border-color: #5b738c;
+  background: linear-gradient(180deg, #3a4e63, #273849);
+}
+
+:root[data-theme="dark"] .side-module-link:hover,
+:root[data-theme="dark"] .side-module-link:focus-visible,
+:root[data-theme="dark"] .side-actions-link:hover,
+:root[data-theme="dark"] .side-actions-link:focus-visible,
+:root[data-theme="dark"] .side-actions button:hover,
+:root[data-theme="dark"] .side-actions button:focus-visible,
+:root[data-theme="dark"] .logout-action:hover,
+:root[data-theme="dark"] .logout-action:focus-visible {
+  color: #ffffff;
+  border-color: #8ca4bd;
+  background: #435b73;
+}
+
 :root[data-theme="dark"] .modal-overlay { background: rgba(4, 7, 12, 0.7); }
 
 @media (max-width: 620px) {
