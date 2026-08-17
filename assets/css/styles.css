@@ -1750,6 +1750,12 @@ body:has(.report-panel) .report-panel {
   mix-blend-mode: screen;
 }
 
+:root[data-theme="dark"] .price-selector span,
+:root[data-theme="dark"] .price-selector input:checked + span,
+:root[data-theme="dark"] .price-selector input:focus-visible + span {
+  color: #151515;
+}
+
 :root[data-theme="dark"] .records-table tbody tr:nth-child(even),
 :root[data-theme="dark"] .cal-empty,
 :root[data-theme="dark"] .usr-operators-list {
