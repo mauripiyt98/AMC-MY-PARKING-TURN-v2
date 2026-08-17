@@ -1014,6 +1014,14 @@ body:has(.report-panel) .report-panel {
   width: min(92vw, 520px);
 }
 
+.ticket-preview-logo {
+  display: block;
+  width: 116px;
+  height: auto;
+  margin: 0 auto 16px;
+  object-fit: contain;
+}
+
 .ticket-preview-details {
   max-height: min(58vh, 510px);
   overflow-y: auto;
@@ -1602,6 +1610,144 @@ body:has(.report-panel) .report-panel {
   .side-module-title {
     font-size: 12px;
   }
+}
+
+/* ============================================================
+   Tema oscuro: se activa exclusivamente con data-theme="dark".
+   El modo claro conserva los estilos originales.
+   ============================================================ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-white: #171d26;
+  --color-black: #f1f5f9;
+  --color-red: #d44850;
+  --color-red-dark: #ff858b;
+  --color-red-soft: #3a2027;
+  --color-ink: #edf2f7;
+  --color-muted: #aeb8c5;
+  --color-line: #3b4655;
+  --color-panel: #202833;
+  --color-steel: #2a3441;
+  --color-warning: #f5be4f;
+  --shadow-panel: 0 18px 45px rgba(0, 0, 0, 0.34);
+  --shadow-control: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] body {
+  background:
+    linear-gradient(90deg, rgba(94, 109, 127, 0.13) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(0deg, rgba(94, 109, 127, 0.1) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(135deg, #10151d 0%, #151c26 46%, #202936 100%);
+}
+
+.theme-toggle {
+  position: fixed;
+  z-index: 1000;
+  top: 16px;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 58px;
+  height: 30px;
+  padding: 3px 6px;
+  border: 1px solid rgba(32, 36, 42, 0.22);
+  border-radius: 999px;
+  color: #7f1519;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 16px rgba(20, 31, 45, 0.16);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  border-color: var(--color-red);
+  box-shadow: 0 7px 20px rgba(127, 21, 25, 0.24);
+  outline: none;
+}
+
+.theme-toggle__sun,
+.theme-toggle__moon {
+  z-index: 1;
+  width: 18px;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+.theme-toggle__moon { color: #65707d; }
+
+.theme-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff7e8;
+  box-shadow: 0 2px 5px rgba(20, 31, 45, 0.2);
+  transition: transform 0.22s ease, background 0.22s ease;
+}
+
+:root[data-theme="dark"] .theme-toggle {
+  border-color: #4c596b;
+  color: #f5be4f;
+  background: #252f3d;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme="dark"] .theme-toggle__sun { color: #8390a0; }
+:root[data-theme="dark"] .theme-toggle__moon { color: #f5be4f; }
+:root[data-theme="dark"] .theme-toggle__thumb { transform: translateX(28px); background: #d44850; }
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color: var(--color-ink) !important;
+  background-color: #202833 !important;
+  border-color: var(--color-line) !important;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder { color: #8793a1; }
+
+:root[data-theme="dark"] .login-panel,
+:root[data-theme="dark"] .plate-panel,
+:root[data-theme="dark"] .records-panel,
+:root[data-theme="dark"] .modal-box,
+:root[data-theme="dark"] .side-module,
+:root[data-theme="dark"] .monthly-calendar,
+:root[data-theme="dark"] .price-config-card,
+:root[data-theme="dark"] .profile-panel,
+:root[data-theme="dark"] .soporte-panel,
+:root[data-theme="dark"] .soporte-info-box,
+:root[data-theme="dark"] .soporte-preview-info {
+  background: linear-gradient(180deg, #1b222d, #151b24) !important;
+}
+
+:root[data-theme="dark"] .records-table tbody tr:nth-child(even),
+:root[data-theme="dark"] .cal-empty,
+:root[data-theme="dark"] .usr-operators-list {
+  background: #202833 !important;
+}
+
+:root[data-theme="dark"] .records-table tbody tr:hover,
+:root[data-theme="dark"] .cal-day:hover {
+  background: #2a3543 !important;
+}
+
+:root[data-theme="dark"] .price-input-wrap,
+:root[data-theme="dark"] .profile-field input,
+:root[data-theme="dark"] .soporte-field input[readonly] {
+  background: #202833 !important;
+}
+
+:root[data-theme="dark"] .modal-overlay { background: rgba(4, 7, 12, 0.7); }
+
+@media (max-width: 620px) {
+  .theme-toggle { top: 10px; left: 10px; }
 }
 
 /* En movil: mostrar el panel de modulos como fila horizontal */

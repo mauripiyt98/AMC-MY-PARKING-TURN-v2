@@ -348,7 +348,7 @@ function openHistoryTicketPreview(record) {
     ['TOTAL COBRADO', formatCurrency(record.totalCharged)], ['OPERADOR', record.operatorName || record.user || 'SIN DATO'],
     ['ESTADO', 'FINALIZADO'],
   ];
-  ticketPreviewDetails.innerHTML = details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+  ticketPreviewDetails.innerHTML = `<img class="ticket-preview-logo" src="../../assets/img/LOGOMPT.png" alt="Logo AMC My Parking Turn">${details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}`;
   ticketPreviewModal.hidden = false;
   closeTicketPreview.focus();
 }
@@ -416,7 +416,7 @@ clearReportFilter.addEventListener("click", () => {
   renderReport();
 });
 
-monthlyReports.addEventListener("click", (event) => {
+monthlyReports.addEventListener("click", async (event) => {
   const deleteButton = event.target.closest(".delete-action");
   const previewButton = event.target.closest('.ticket-preview-action');
   const downloadButton = event.target.closest('.ticket-download-action');
@@ -429,8 +429,12 @@ monthlyReports.addEventListener("click", (event) => {
   if (downloadButton) {
     const record = getHistory()[Number(downloadButton.dataset.index)];
     if (!record || !window.MPTTicketPdf) return;
-    const filename = window.MPTTicketPdf.download(record);
-    reportMessage.textContent = `PDF descargado localmente: ${filename}`;
+    try {
+      const filename = await window.MPTTicketPdf.download(record);
+      reportMessage.textContent = `PDF descargado localmente: ${filename}`;
+    } catch (_error) {
+      reportMessage.textContent = 'No fue posible generar el comprobante PDF con el logo.';
+    }
     return;
   }
 

@@ -9,6 +9,8 @@
 
   const PDF_WIDTH = 288;
   const PDF_HEIGHT = 432;
+  const LOGO_SIZE = 96;
+  const LOGO_URL = new URL('../img/LOGOMPT.png', document.currentScript?.src || global.location.href).href;
 
   function text(value) {
     return String(value ?? 'SIN DATO')
@@ -20,6 +22,34 @@
     const bytes = new Uint8Array(value.length);
     for (let index = 0; index < value.length; index += 1) bytes[index] = value.charCodeAt(index) & 0xFF;
     return bytes;
+  }
+
+  function asBinaryString(bytes) {
+    let result = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      result += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return result;
+  }
+
+  function loadLogo() {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = LOGO_SIZE;
+        canvas.height = LOGO_SIZE;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, LOGO_SIZE, LOGO_SIZE);
+        context.drawImage(image, 0, 0, LOGO_SIZE, LOGO_SIZE);
+        const bytes = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', 0.92).split(',')[1]), (character) => character.charCodeAt(0));
+        resolve(bytes);
+      };
+      image.onerror = () => reject(new Error('No fue posible cargar el logo del comprobante.'));
+      image.src = LOGO_URL;
+    });
   }
 
   function formatCurrency(value) {
@@ -45,7 +75,7 @@
     return `Ticket_${ticket}_${plate}_${ticketDate(record)}.pdf`;
   }
 
-  function buildPdf(record) {
+  function buildPdf(record, logoBytes) {
     const lines = [
       ['MY PARKING TURN', 16],
       ['COMPROBANTE DE SALIDA', 11],
@@ -66,19 +96,24 @@
       ['', 9],
       ['Gracias por utilizar nuestro servicio.', 9],
     ];
-    let cursorY = 395;
-    const commands = ['36 405 m 252 405 l S', 'BT', '/F1 10 Tf'];
+    let cursorY = 286;
+    const commands = [
+      `q ${LOGO_SIZE} 0 0 ${LOGO_SIZE} 96 310 cm /Im1 Do Q`,
+      '36 298 m 252 298 l S',
+      'BT', '/F1 10 Tf',
+    ];
     lines.forEach(([line, size]) => {
       if (line) commands.push(`/F1 ${size} Tf`, `36 ${cursorY} Td (${text(line)}) Tj`, `-36 -${cursorY} Td`);
-      cursorY -= 19;
+      cursorY -= 16;
     });
     commands.push('ET');
     const stream = commands.join('\n');
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH} ${PDF_HEIGHT}] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH} ${PDF_HEIGHT}] /Resources << /Font << /F1 4 0 R >> /XObject << /Im1 5 0 R >> >> /Contents 6 0 R >>`,
       '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+      `<< /Type /XObject /Subtype /Image /Width ${LOGO_SIZE} /Height ${LOGO_SIZE} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBytes.length} >>\nstream\n${asBinaryString(logoBytes)}\nendstream`,
       `<< /Length ${asPdfBytes(stream).length} >>\nstream\n${stream}\nendstream`,
     ];
     let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
@@ -94,8 +129,9 @@
     return new Blob([asPdfBytes(pdf)], { type: 'application/pdf' });
   }
 
-  function download(record) {
-    const blob = buildPdf(record);
+  async function download(record) {
+    const logoBytes = await loadLogo();
+    const blob = buildPdf(record, logoBytes);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

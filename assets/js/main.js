@@ -415,7 +415,7 @@ function openActiveTicketPreview(record) {
     ['HORAS ACTUALES', chargedHours], ['VALOR ACTUAL', formatCurrency(totalCharged)],
     ['OPERADOR', record.user || 'SIN DATO'], ['ESTADO', 'ACTIVO'],
   ];
-  ticketPreviewDetails.innerHTML = details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+  ticketPreviewDetails.innerHTML = `<img class="ticket-preview-logo" src="../assets/img/LOGOMPT.png" alt="Logo AMC My Parking Turn">${details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}`;
   ticketPreviewModal.hidden = false;
   closeTicketPreview.focus();
 }
@@ -758,13 +758,17 @@ closeCharge.addEventListener("click", closeChargeModal);
 closeTicketPreview.addEventListener('click', () => { ticketPreviewModal.hidden = true; });
 ticketPreviewModal.addEventListener('click', (event) => { if (event.target === ticketPreviewModal) ticketPreviewModal.hidden = true; });
 
-generatePdfButton.addEventListener("click", () => {
+generatePdfButton.addEventListener("click", async () => {
   if (!pendingPdfTicket || !window.MPTTicketPdf) {
     plateMessage.textContent = 'No hay un comprobante de salida disponible para descargar.';
     return;
   }
-  const filename = window.MPTTicketPdf.download(pendingPdfTicket);
-  plateMessage.textContent = `PDF descargado localmente: ${filename}`;
+  try {
+    const filename = await window.MPTTicketPdf.download(pendingPdfTicket);
+    plateMessage.textContent = `PDF descargado localmente: ${filename}`;
+  } catch (_error) {
+    plateMessage.textContent = 'No fue posible generar el comprobante PDF con el logo.';
+  }
 });
 
 chargeModal.addEventListener("click", (event) => {
