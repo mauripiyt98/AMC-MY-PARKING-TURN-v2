@@ -1706,8 +1706,11 @@ body:has(.report-panel) .report-panel {
 :root[data-theme="dark"] select,
 :root[data-theme="dark"] textarea {
   color: var(--color-ink) !important;
-  background-color: #202833 !important;
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: #f5be4f;
+  background: #202833 !important;
   border-color: var(--color-line) !important;
+  box-shadow: none;
 }
 
 :root[data-theme="dark"] input::placeholder,
@@ -1725,6 +1728,26 @@ body:has(.report-panel) .report-panel {
 :root[data-theme="dark"] .soporte-info-box,
 :root[data-theme="dark"] .soporte-preview-info {
   background: linear-gradient(180deg, #1b222d, #151b24) !important;
+}
+
+:root[data-theme="dark"] .operator-status {
+  background: linear-gradient(145deg, #202a36 0%, #161e28 100%);
+  border-color: #4b5f73;
+  border-top-color: var(--color-red-dark);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.34);
+}
+
+:root[data-theme="dark"] .operator-status-label,
+:root[data-theme="dark"] .operator-status span:not(.operator-status-label) {
+  color: #b8c4d1;
+}
+
+:root[data-theme="dark"] .brand-logo {
+  border: 1px solid #526b84;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  filter: invert(1) sepia(0.3) saturate(3) hue-rotate(290deg) brightness(0.9) contrast(1.1);
+  mix-blend-mode: screen;
 }
 
 :root[data-theme="dark"] .records-table tbody tr:nth-child(even),
