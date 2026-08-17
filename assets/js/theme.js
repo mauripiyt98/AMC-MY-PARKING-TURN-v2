@@ -6,9 +6,9 @@
 
   function readTheme() {
     try {
-      return localStorage.getItem(storageKey) === 'dark' ? 'dark' : 'light';
+      return localStorage.getItem(storageKey) === 'light' ? 'light' : 'dark';
     } catch (_error) {
-      return 'light';
+      return 'dark';
     }
   }
 
