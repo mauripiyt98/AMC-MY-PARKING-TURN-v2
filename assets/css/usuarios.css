@@ -17,7 +17,7 @@
   --usr-radius-lg:   12px;
   --usr-radius-md:   8px;
   --usr-radius-sm:   6px;
-  --font-usr: 'Inter', Arial, Helvetica, sans-serif;
+  --font-usr: 'Roboto', sans-serif;
 }
 
 /* ── Layout raíz de pantalla ── */
@@ -711,7 +711,7 @@
 
 /* ── ID en tabla ── */
 .usr-id-cell {
-  font-family: 'Courier New', monospace;
+  font-family: 'Roboto', sans-serif;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
