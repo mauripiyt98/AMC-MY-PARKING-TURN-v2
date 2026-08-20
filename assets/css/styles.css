@@ -768,7 +768,7 @@ body:has(.report-panel) .report-panel {
   z-index: 1;
   margin-top: 20px;
   display: block;
-  height: clamp(600px, 90vh, 900px);
+  height: clamp(360px, 58vh, 560px);
   overflow: hidden;
 }
 
