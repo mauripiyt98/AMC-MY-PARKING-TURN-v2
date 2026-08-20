@@ -73,9 +73,26 @@ function serializeMonthly(row) {
     id: row.id, ticketNumber: Number(row.ticket_numero), plate: row.placa,
     vehicleType: row.tipo_vehiculo, startDate: row.fecha_inicio, expiryDate: row.fecha_vencimiento,
     monthlyRate: Number(row.tarifa_mensual), user: row.creado_por_nombre,
+    responsible: row.responsable, document: row.documento, contact: row.contacto, address: row.direccion,
     createdAt: new Date(row.creado_en).toISOString(), closedDate: row.cerrada_en,
     closedReason: row.motivo_cierre,
   };
+}
+
+function serializeMonthlyCharge(row) {
+  return {
+    id: row.id, monthlyId: row.mensualidad_id, amount: Number(row.valor), status: row.estado,
+    paidAt: row.pagado_en ? new Date(row.pagado_en).toISOString() : null,
+  };
+}
+
+async function createMonthlyCharge(client, monthly) {
+  const { rows } = await client.query(
+    `INSERT INTO mensualidad_cobros (parqueadero_id, mensualidad_id, valor)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [monthly.parqueadero_id, monthly.id, monthly.tarifa_mensual]
+  );
+  return rows[0];
 }
 
 router.get('/estado', async (req, res, next) => {
@@ -84,11 +101,14 @@ router.get('/estado', async (req, res, next) => {
       `SELECT * FROM turnos WHERE parqueadero_id = $1 ORDER BY ingreso_en DESC`, [req.parqueaderoId]);
     const monthly = await req.dbClient.query(
       `SELECT * FROM mensualidades WHERE parqueadero_id = $1 ORDER BY creado_en DESC`, [req.parqueaderoId]);
+    const monthlyCharges = await req.dbClient.query(
+      `SELECT * FROM mensualidad_cobros WHERE parqueadero_id = $1 ORDER BY creado_en DESC`, [req.parqueaderoId]);
     res.json({ success: true,
       records: rows.filter((r) => r.estado === 'ACTIVO').map(serializeTurn),
       history: rows.filter((r) => r.estado === 'FINALIZADO').map(serializeTurn),
       monthlyRecords: monthly.rows.filter((r) => r.estado === 'ACTIVA').map(serializeMonthly),
       monthlyHistory: monthly.rows.filter((r) => r.estado !== 'ACTIVA').map(serializeMonthly),
+      monthlyCharges: monthlyCharges.rows.map(serializeMonthlyCharge),
     });
   } catch (err) { next(err); }
 });
@@ -147,18 +167,63 @@ router.post('/mensualidades', requirePrincipalOperator, async (req, res, next) =
   try {
     const plate = normalizePlate(req.body.plate);
     if (!INTEGER(req.body.monthlyRate, { min: 1 }) || !req.body.vehicleType) throw new ValidationError('Datos de mensualidad inválidos.');
+    const responsible = String(req.body.responsible || '').trim().slice(0, 150);
+    const document = String(req.body.document || '').trim().slice(0, 20);
+    const contact = String(req.body.contact || '').trim().slice(0, 20);
+    const address = String(req.body.address || '').trim().slice(0, 150);
     const ticket = await nextTicket(req, 'mensualidades');
     const { rows } = await req.dbClient.query(
-      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, creado_por_id, creado_por_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0,20), req.body.startDate, req.body.expiryDate, Number(req.body.monthlyRate), req.user.id, req.user.nombre]
+      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, creado_por_id, creado_por_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0,20), req.body.startDate, req.body.expiryDate, Number(req.body.monthlyRate), responsible || null, document || null, contact || null, address || null, req.user.id, req.user.nombre]
     );
+    const charge = await createMonthlyCharge(req.dbClient, rows[0]);
     await audit(req, 'MENSUALIDAD_CREADA', 'mensualidades', rows[0].id, { placa: plate });
-    res.status(201).json({ success: true, record: serializeMonthly(rows[0]) });
+    res.status(201).json({ success: true, record: serializeMonthly(rows[0]), charge: serializeMonthlyCharge(charge) });
   } catch (err) {
     if (err.code === '23505') return next(new ConflictError('La placa ya tiene una mensualidad activa o el ticket ya existe.'));
     next(err);
   }
+});
+
+router.post('/mensualidades/:id/renovar', requirePrincipalOperator, async (req, res, next) => {
+  try {
+    if (!id(req.params.id)) throw new ValidationError('Identificador de mensualidad inválido.');
+    const { rows: previousRows } = await req.dbClient.query(
+      `SELECT * FROM mensualidades WHERE id = $1 AND parqueadero_id = $2 FOR UPDATE`,
+      [req.params.id, req.parqueaderoId]
+    );
+    const previous = previousRows[0];
+    if (!previous) throw new NotFoundError('Mensualidad');
+    if (previous.estado === 'ACTIVA') throw new ConflictError('La mensualidad todavía está activa y no se puede renovar.');
+
+    const ticket = await nextTicket(req, 'mensualidades');
+    const { rows } = await req.dbClient.query(
+      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, renovacion_de_id, creado_por_id, creado_por_nombre)
+       VALUES ($1,$2,$3,$4,$5,($5::date + INTERVAL '1 month')::date,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [req.parqueaderoId, ticket, previous.placa, previous.tipo_vehiculo, previous.fecha_vencimiento, previous.tarifa_mensual, previous.responsable, previous.documento, previous.contacto, previous.direccion, previous.id, req.user.id, req.user.nombre]
+    );
+    const charge = await createMonthlyCharge(req.dbClient, rows[0]);
+    await audit(req, 'MENSUALIDAD_RENOVADA', 'mensualidades', rows[0].id, { renovacion_de_id: previous.id, ticket });
+    res.status(201).json({ success: true, record: serializeMonthly(rows[0]), charge: serializeMonthlyCharge(charge) });
+  } catch (err) { next(err); }
+});
+
+router.patch('/mensualidad-cobros/:id', requirePrincipalOperator, async (req, res, next) => {
+  try {
+    if (!id(req.params.id) || !['POR_COBRAR', 'PAGADO'].includes(req.body.status)) {
+      throw new ValidationError('Estado de cobro inválido.');
+    }
+    const { rows } = await req.dbClient.query(
+      `UPDATE mensualidad_cobros
+       SET estado = $1, pagado_en = CASE WHEN $1 = 'PAGADO' THEN NOW() ELSE NULL END
+       WHERE id = $2 AND parqueadero_id = $3 RETURNING *`,
+      [req.body.status, req.params.id, req.parqueaderoId]
+    );
+    if (!rows[0]) throw new NotFoundError('Cobro de mensualidad');
+    await audit(req, 'COBRO_MENSUALIDAD_ACTUALIZADO', 'mensualidad_cobros', rows[0].id, { status: rows[0].estado });
+    res.json({ success: true, charge: serializeMonthlyCharge(rows[0]) });
+  } catch (err) { next(err); }
 });
 
 router.post('/mensualidades/:id/cerrar', requirePrincipalOperator, async (req, res, next) => {

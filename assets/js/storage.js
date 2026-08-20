@@ -268,6 +268,7 @@ function hydrateFromServer() {
         _replaceLocal(KEYS.plateHistory, state.history || []);
         _replaceLocal(KEYS.monthlyRecords, state.monthlyRecords || []);
         _replaceLocal(KEYS.monthlyHistory, state.monthlyHistory || []);
+        _replaceLocal(KEYS.monthlyCharges, state.monthlyCharges || []);
         const nextTurn = Math.max(0, ...(state.records || []), ...(state.history || [])
           .map((record) => Number(record.ticketNumber) || 0)) + 1;
         const nextMonthly = Math.max(0, ...(state.monthlyRecords || []), ...(state.monthlyHistory || [])
@@ -315,8 +316,25 @@ async function createMonthly(record) {
   const records = getMonthlyRecords();
   records.unshift(data.record);
   saveMonthlyRecords(records);
+  if (data.charge) saveMonthlyCharges([data.charge, ...getMonthlyCharges().filter((charge) => charge.id !== data.charge.id)]);
   saveNextMonthlyTicket(Math.max(getStoredNextMonthlyTicket(), Number(data.record.ticketNumber) + 1));
   return data.record;
+}
+
+async function renewMonthly(id) {
+  const data = await apiRequest(`/operacion/mensualidades/${encodeURIComponent(id)}/renovar`, { method: 'POST' });
+  saveMonthlyRecords([data.record, ...getMonthlyRecords().filter((record) => record.id !== data.record.id)]);
+  if (data.charge) saveMonthlyCharges([data.charge, ...getMonthlyCharges().filter((charge) => charge.id !== data.charge.id)]);
+  saveNextMonthlyTicket(Math.max(getStoredNextMonthlyTicket(), Number(data.record.ticketNumber) + 1));
+  return data.record;
+}
+
+async function setMonthlyChargeStatus(id, status) {
+  const data = await apiRequest(`/operacion/mensualidad-cobros/${encodeURIComponent(id)}`, {
+    method: 'PATCH', body: JSON.stringify({ status })
+  });
+  saveMonthlyCharges(getMonthlyCharges().map((charge) => charge.id === data.charge.id ? data.charge : charge));
+  return data.charge;
 }
 
 async function closeMonthly(id, reason = 'CIERRE MANUAL') {
@@ -344,6 +362,7 @@ const KEYS = {
   nextTicket:      "mptNextTicketNumber",
   monthlyRecords:  "mptMonthlyRecords",
   monthlyHistory:  "mptMonthlyHistory",
+  monthlyCharges:  "mptMonthlyCharges",
   monthlyTicket:   "mptNextMonthlyTicket",
   parkingProfile:  "mptParkingProfile",
   parkingPrices:   "mptParkingPrices",
@@ -396,6 +415,14 @@ function getMonthlyHistory() {
 
 function saveMonthlyHistory(history) {
   _localSet(KEYS.monthlyHistory, history);
+}
+
+function getMonthlyCharges() {
+  return _localGet(KEYS.monthlyCharges) || [];
+}
+
+function saveMonthlyCharges(charges) {
+  _localSet(KEYS.monthlyCharges, charges);
 }
 
 function getStoredNextMonthlyTicket() {
@@ -581,9 +608,13 @@ window.MPTStorage = {
   saveMonthlyRecords,
   getMonthlyHistory,
   saveMonthlyHistory,
+  getMonthlyCharges,
+  saveMonthlyCharges,
   getStoredNextMonthlyTicket,
   saveNextMonthlyTicket,
   createMonthly,
+  renewMonthly,
+  setMonthlyChargeStatus,
   closeMonthly,
   deleteMonthly,
   // Perfil del parqueadero

@@ -12,6 +12,10 @@ const monthlyForm          = document.getElementById("monthlyForm");
 const mPlacaInput          = document.getElementById("mPlaca");
 const mStartDateInput      = document.getElementById("mStartDate");
 const mRateInput           = document.getElementById("mRate");
+const mResponsibleInput    = document.getElementById("mResponsible");
+const mDocumentInput       = document.getElementById("mDocument");
+const mContactInput        = document.getElementById("mContact");
+const mAddressInput        = document.getElementById("mAddress");
 const mFormMessage         = document.getElementById("mFormMessage");
 const mActivePlateFilter   = document.getElementById("mActivePlateFilter");
 const activeBody           = document.getElementById("activeBody");
@@ -29,6 +33,7 @@ const mSummaryPeriod       = document.getElementById("mSummaryPeriod");
 const mSummaryTickets      = document.getElementById("mSummaryTickets");
 const mSummaryTotal        = document.getElementById("mSummaryTotal");
 const mHistoryMessage      = document.getElementById("mHistoryMessage");
+const monthlyDriversList   = document.getElementById("monthlyDriversList");
 const exitModal            = document.getElementById("exitModal");
 const exitModalText        = document.getElementById("exitModalText");
 const cancelExitBtn        = document.getElementById("cancelExitBtn");
@@ -333,6 +338,50 @@ function renderHistory() {
   </tr>`).join("");
 }
 
+function escapeHtml(value) {
+  return String(value || "-")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderMonthlyDrivers() {
+  if (!monthlyDriversList) return;
+
+  const today = getTodayStr();
+  const activeIds = new Set(getMonthlyRecords().map((record) => record.id || `ticket-${record.ticketNumber}`));
+  const records = [...getMonthlyRecords(), ...getMonthlyHistory()]
+    .sort((first, second) => String(second.createdAt || "").localeCompare(String(first.createdAt || "")));
+
+  if (records.length === 0) {
+    monthlyDriversList.innerHTML = '<p class="monthly-drivers-empty">AÚN NO HAY CONDUCTORES REGISTRADOS EN MENSUALIDADES.</p>';
+    return;
+  }
+
+  monthlyDriversList.innerHTML = records.map((record) => {
+    const recordId = record.id || `ticket-${record.ticketNumber}`;
+    const isActive = activeIds.has(recordId) && record.expiryDate >= today;
+    const status = isActive
+      ? '<span class="monthly-driver-status monthly-driver-status--active">ACTIVA</span>'
+      : `<span class="monthly-driver-status monthly-driver-status--expired">${record.expiryDate < today ? "VENCIDA" : "FINALIZADA"}</span>`;
+
+    return `<article class="monthly-driver-card">
+      <div class="monthly-driver-card__header">
+        <strong>MEN-${escapeHtml(record.ticketNumber)}</strong>
+        ${status}
+      </div>
+      <dl>
+        <div><dt>RESPONSABLE</dt><dd>${escapeHtml(record.responsible)}</dd></div>
+        <div><dt>DOCUMENTO</dt><dd>${escapeHtml(record.document)}</dd></div>
+        <div><dt>CONTACTO</dt><dd>${escapeHtml(record.contact)}</dd></div>
+        <div><dt>DIRECCIÓN</dt><dd>${escapeHtml(record.address)}</dd></div>
+      </dl>
+    </article>`;
+  }).join("");
+}
+
 // ================================================================
 // MODAL: CERRAR MENSUALIDAD
 // ================================================================
@@ -385,6 +434,7 @@ confirmExitBtn.addEventListener("click", async () => {
     renderActiveSubscriptions();
     renderCalendar();
     renderHistory();
+    renderMonthlyDrivers();
   }
 
   closeExitModal();
@@ -457,6 +507,7 @@ deleteForm.addEventListener("submit", async (e) => {
       : "";
     renderActiveSubscriptions();
     renderCalendar();
+    renderMonthlyDrivers();
   } else if (pendingDelete.type === "history") {
     const history = getMonthlyHistory();
     const record  = history[pendingDelete.index];
@@ -474,6 +525,7 @@ deleteForm.addEventListener("submit", async (e) => {
       ? `Registro historico eliminado para la placa ${record.plate}.`
       : "";
     renderHistory();
+    renderMonthlyDrivers();
   }
 
   closeDeleteModal();
@@ -577,6 +629,10 @@ monthlyForm.addEventListener("submit", async (e) => {
     startDate,
     expiryDate,
     monthlyRate:  rateRaw,
+    responsible:  mResponsibleInput.value.trim(),
+    document:     mDocumentInput.value.trim(),
+    contact:      mContactInput.value.trim(),
+    address:      mAddressInput.value.trim(),
     user:         MPTStorage.getActiveUserName(),
     createdAt:    new Date().toISOString(),
   };
@@ -598,6 +654,7 @@ monthlyForm.addEventListener("submit", async (e) => {
   mStartDateInput.value = getTodayStr();
   renderActiveSubscriptions();
   renderCalendar();
+  renderMonthlyDrivers();
 });
 
 // Normalizacion en tiempo real de la placa
@@ -652,6 +709,7 @@ async function init() {
   renderCalendar();
   renderActiveSubscriptions();
   renderHistory();
+  renderMonthlyDrivers();
 }
 
 init();
@@ -661,10 +719,12 @@ setInterval(async () => {
   await checkExpiredSubscriptions();
   renderActiveSubscriptions();
   renderCalendar();
+  renderMonthlyDrivers();
 }, 60000);
 
 window.addEventListener('mpt:storage-hydrated', () => {
   renderCalendar();
   renderActiveSubscriptions();
   renderHistory();
+  renderMonthlyDrivers();
 });

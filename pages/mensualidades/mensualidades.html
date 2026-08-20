@@ -50,6 +50,26 @@
               </label>
             </fieldset>
 
+            <label class="field">
+              <span>RESPONSABLE</span>
+              <input id="mResponsible" name="mResponsible" type="text" autocomplete="name" maxlength="150" placeholder="Nombre completo">
+            </label>
+
+            <label class="field">
+              <span>DOCUMENTO</span>
+              <input id="mDocument" name="mDocument" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Número de cédula">
+            </label>
+
+            <label class="field">
+              <span>CONTACTO</span>
+              <input id="mContact" name="mContact" type="text" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Teléfono">
+            </label>
+
+            <label class="field">
+              <span>DIRECCIÓN</span>
+              <input id="mAddress" name="mAddress" type="text" autocomplete="street-address" maxlength="150" placeholder="Torre, apto">
+            </label>
+
             <p id="mFormMessage" class="form-message" role="alert" aria-live="polite"></p>
             <button class="primary-action" type="submit">REGISTRAR MENSUALIDAD</button>
 
@@ -166,10 +186,31 @@
 
       </section>
 
+      <section class="records-panel monthly-drivers-panel" aria-labelledby="monthly-drivers-title">
+        <h2 id="monthly-drivers-title">CONDUCTORES DE MENSUALIDADES</h2>
+        <div id="monthlyDriversList" class="monthly-drivers-list" aria-live="polite"></div>
+      </section>
+
       <a class="secondary-action report-link" href="../principal.html">VOLVER A TURNOS ACTIVOS</a>
       <button id="logoutButton" class="logout-action" type="button">CERRAR SESION</button>
 
     </main>
+
+    <div id="monthlyChargeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="monthlyChargeTitle" hidden>
+      <section class="modal-box monthly-charge-modal-box">
+        <h2 id="monthlyChargeTitle">GESTIONAR COBROS</h2>
+        <dl class="monthly-charge-summary">
+          <div><dt>TICKET</dt><dd id="monthlyChargeTicket"></dd></div>
+          <div><dt>VALOR MENSUAL</dt><dd id="monthlyChargeAmount"></dd></div>
+        </dl>
+        <div class="monthly-charge-actions" aria-label="Estado del cobro">
+          <button id="markChargePending" type="button">POR COBRAR</button>
+          <button id="markChargePaid" type="button">PAGADO</button>
+        </div>
+        <p id="monthlyChargeMessage" class="form-message" role="alert" aria-live="polite"></p>
+        <div class="modal-actions"><button id="closeMonthlyCharge" class="secondary-action" type="button">CERRAR</button></div>
+      </section>
+    </div>
 
     <!-- Modal: Confirmar cierre de mensualidad -->
     <div id="exitModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle" hidden>
