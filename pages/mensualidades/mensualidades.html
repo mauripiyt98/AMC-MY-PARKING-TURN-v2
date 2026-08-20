@@ -115,13 +115,14 @@
                 <th scope="col">TARIFA MENSUAL</th>
                 <th scope="col">ESTADO</th>
                 <th scope="col">USUARIO</th>
+                <th scope="col">RENOVAR</th>
                 <th scope="col">CERRAR</th>
                 <th scope="col">ELIMINAR</th>
               </tr>
             </thead>
             <tbody id="activeBody">
               <tr class="empty-record">
-                <td colspan="10">AUN NO HAY MENSUALIDADES REGISTRADAS</td>
+                <td colspan="11">AUN NO HAY MENSUALIDADES REGISTRADAS</td>
               </tr>
             </tbody>
           </table>
@@ -173,12 +174,13 @@
                 <th scope="col">FECHA CIERRE</th>
                 <th scope="col">TARIFA</th>
                 <th scope="col">MOTIVO</th>
+                <th scope="col">RENOVAR</th>
                 <th scope="col">ELIMINAR</th>
               </tr>
             </thead>
             <tbody id="historyBody">
               <tr class="empty-record">
-                <td colspan="8">AUN NO HAY HISTORICOS DE MENSUALIDADES</td>
+                <td colspan="9">AUN NO HAY HISTORICOS DE MENSUALIDADES</td>
               </tr>
             </tbody>
           </table>
@@ -198,17 +200,13 @@
 
     <div id="monthlyChargeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="monthlyChargeTitle" hidden>
       <section class="modal-box monthly-charge-modal-box">
-        <h2 id="monthlyChargeTitle">GESTIONAR COBROS</h2>
-        <dl class="monthly-charge-summary">
-          <div><dt>TICKET</dt><dd id="monthlyChargeTicket"></dd></div>
-          <div><dt>VALOR MENSUAL</dt><dd id="monthlyChargeAmount"></dd></div>
-        </dl>
-        <div class="monthly-charge-actions" aria-label="Estado del cobro">
-          <button id="markChargePending" type="button">POR COBRAR</button>
-          <button id="markChargePaid" type="button">PAGADO</button>
-        </div>
+        <h2 id="monthlyChargeTitle">💰 GESTIONAR COBROS</h2>
+        <div id="chargeModalDriverInfo" class="charge-modal-driver-info"></div>
+        <div id="chargeList" class="charge-list-container" aria-live="polite"></div>
         <p id="monthlyChargeMessage" class="form-message" role="alert" aria-live="polite"></p>
-        <div class="modal-actions"><button id="closeMonthlyCharge" class="secondary-action" type="button">CERRAR</button></div>
+        <div class="modal-actions">
+          <button id="closeMonthlyCharge" class="secondary-action" type="button">CERRAR</button>
+        </div>
       </section>
     </div>
 

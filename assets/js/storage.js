@@ -615,6 +615,7 @@ window.MPTStorage = {
   createMonthly,
   renewMonthly,
   setMonthlyChargeStatus,
+  updateMonthlyCharge: setMonthlyChargeStatus,
   closeMonthly,
   deleteMonthly,
   // Perfil del parqueadero

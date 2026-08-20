@@ -1,6 +1,6 @@
 // ============================================================
 // mensualidades.js — Modulo de mensualidades My Parking Turn
-// My Parking Turn v2
+// My Parking Turn v2 — Actualizado: RENOVAR + GESTIONAR COBROS
 //
 // Dependencias (cargadas antes en el HTML):
 //   1. session-guard.js  — proteccion de ruta
@@ -45,11 +45,19 @@ const deleteMessage        = document.getElementById("deleteMessage");
 const cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
 const logoutButton         = document.getElementById("logoutButton");
 
+// ── Cobros modal ──
+const monthlyChargeModal    = document.getElementById("monthlyChargeModal");
+const chargeModalDriverInfo = document.getElementById("chargeModalDriverInfo");
+const chargeList            = document.getElementById("chargeList");
+const monthlyChargeMessage  = document.getElementById("monthlyChargeMessage");
+const closeMonthlyCharge    = document.getElementById("closeMonthlyCharge");
+
 // ===== Estado =====
-let calendarYear    = new Date().getFullYear();
-let calendarMonth   = new Date().getMonth();
-let pendingExitIndex = null;
-let pendingDelete    = null;
+let calendarYear      = new Date().getFullYear();
+let calendarMonth     = new Date().getMonth();
+let pendingExitIndex  = null;
+let pendingDelete     = null;
+let pendingChargeRecord = null;  // Registro activo en modal de cobros
 
 // ================================================================
 // STORAGE — via capa MPTStorage (storage.js)
@@ -147,14 +155,19 @@ function getPeriodLabel() {
   return "TODOS LOS HISTORICOS";
 }
 
+function escapeHtml(value) {
+  return String(value || "-")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // ================================================================
 // AUTO-VENCIMIENTO
 // ================================================================
 
-/**
- * Mueve al historico los registros cuya fecha de vencimiento
- * ya paso. Se ejecuta al cargar la pagina.
- */
 async function checkExpiredSubscriptions() {
   const records  = getMonthlyRecords();
   const history  = getMonthlyHistory();
@@ -207,7 +220,6 @@ function renderCalendar() {
 
   let html = dayNames.map((n) => `<div class="cal-header-cell">${n}</div>`).join("");
 
-  // Celdas vacías al inicio
   for (let i = 0; i < firstWeekDay; i++) {
     html += `<div class="cal-day cal-empty"></div>`;
   }
@@ -250,7 +262,7 @@ function renderCalendar() {
 }
 
 // ================================================================
-// RENDER MENSUALIDADES ACTIVAS
+// RENDER MENSUALIDADES ACTIVAS  (incluye columna RENOVAR)
 // ================================================================
 
 function renderActiveSubscriptions() {
@@ -262,18 +274,25 @@ function renderActiveSubscriptions() {
     : mapped;
 
   if (records.length === 0) {
-    activeBody.innerHTML = `<tr class="empty-record"><td colspan="10">AUN NO HAY MENSUALIDADES REGISTRADAS</td></tr>`;
+    activeBody.innerHTML = `<tr class="empty-record"><td colspan="11">AUN NO HAY MENSUALIDADES REGISTRADAS</td></tr>`;
     return;
   }
 
   if (filtered.length === 0) {
-    activeBody.innerHTML = `<tr class="empty-record"><td colspan="10">NO HAY MENSUALIDADES PARA ESA PLACA</td></tr>`;
+    activeBody.innerHTML = `<tr class="empty-record"><td colspan="11">NO HAY MENSUALIDADES PARA ESA PLACA</td></tr>`;
     return;
   }
 
   activeBody.innerHTML = filtered.map(({ record, index }) => {
-    const days               = getDaysRemaining(record.expiryDate);
-    const { text, cls }      = getStatusInfo(days);
+    const days          = getDaysRemaining(record.expiryDate);
+    const { text, cls } = getStatusInfo(days);
+
+    // RENOVAR: solo habilitado cuando vencida (days <= 0)
+    const canRenew = days <= 0;
+    const renewBtn = canRenew
+      ? `<button class="renew-action monthly-renew-btn" data-index="${index}" type="button" title="Renovar mensualidad desde ${record.expiryDate}">🔄 RENOVAR</button>`
+      : `<button class="renew-action renew-action--disabled" disabled type="button" title="La mensualidad aún está activa">🔄 RENOVAR</button>`;
+
     return `<tr>
       <td>MEN-${record.ticketNumber}</td>
       <td>${record.plate}</td>
@@ -283,6 +302,7 @@ function renderActiveSubscriptions() {
       <td>${formatCurrency(record.monthlyRate)}</td>
       <td><span class="status-badge ${cls}">${text}</span></td>
       <td>${record.user}</td>
+      <td>${renewBtn}</td>
       <td><button class="exit-action monthly-close-btn" data-index="${index}" type="button">CERRAR</button></td>
       <td><button class="delete-action monthly-delete-btn" data-index="${index}" data-type="active" type="button">ELIMINAR</button></td>
     </tr>`;
@@ -290,7 +310,7 @@ function renderActiveSubscriptions() {
 }
 
 // ================================================================
-// RENDER HISTORICO
+// RENDER HISTORICO  (incluye columna RENOVAR habilitado)
 // ================================================================
 
 function renderHistory() {
@@ -298,7 +318,6 @@ function renderHistory() {
   const startF     = mStartFilter ? mStartFilter.value : "";
   const endF       = mEndFilter   ? mEndFilter.value   : "";
 
-  // Asociar index original ANTES de filtrar
   const withIndex  = history.map((record, originalIndex) => ({ record, originalIndex }));
 
   const filtered   = withIndex.filter(({ record }) => {
@@ -308,7 +327,6 @@ function renderHistory() {
     return true;
   });
 
-  // Validar rango
   if (startF && endF && startF > endF) {
     mHistoryMessage.textContent = "La fecha inicial no puede ser mayor que la fecha final.";
     return;
@@ -322,7 +340,7 @@ function renderHistory() {
   if (mSummaryTotal)   mSummaryTotal.textContent    = formatCurrency(total);
 
   if (filtered.length === 0) {
-    historyBody.innerHTML = `<tr class="empty-record"><td colspan="8">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
+    historyBody.innerHTML = `<tr class="empty-record"><td colspan="9">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
     return;
   }
 
@@ -334,26 +352,22 @@ function renderHistory() {
     <td>${formatDateDisplay(record.closedDate || record.expiryDate)}</td>
     <td>${formatCurrency(record.monthlyRate)}</td>
     <td>${record.closedReason || "CIERRE MANUAL"}</td>
+    <td><button class="renew-action hist-renew-btn" data-index="${originalIndex}" type="button" title="Renovar: nuevo mes desde ${record.expiryDate}">🔄 RENOVAR</button></td>
     <td><button class="delete-action hist-delete-btn" data-index="${originalIndex}" type="button">ELIMINAR</button></td>
   </tr>`).join("");
 }
 
-function escapeHtml(value) {
-  return String(value || "-")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+// ================================================================
+// RENDER CONDUCTORES  (incluye botón GESTIONAR COBROS)
+// ================================================================
 
 function renderMonthlyDrivers() {
   if (!monthlyDriversList) return;
 
-  const today = getTodayStr();
-  const activeIds = new Set(getMonthlyRecords().map((record) => record.id || `ticket-${record.ticketNumber}`));
-  const records = [...getMonthlyRecords(), ...getMonthlyHistory()]
-    .sort((first, second) => String(second.createdAt || "").localeCompare(String(first.createdAt || "")));
+  const today    = getTodayStr();
+  const activeIds = new Set(getMonthlyRecords().map((r) => r.id || `ticket-${r.ticketNumber}`));
+  const records  = [...getMonthlyRecords(), ...getMonthlyHistory()]
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
   if (records.length === 0) {
     monthlyDriversList.innerHTML = '<p class="monthly-drivers-empty">AÚN NO HAY CONDUCTORES REGISTRADOS EN MENSUALIDADES.</p>';
@@ -361,25 +375,248 @@ function renderMonthlyDrivers() {
   }
 
   monthlyDriversList.innerHTML = records.map((record) => {
-    const recordId = record.id || `ticket-${record.ticketNumber}`;
-    const isActive = activeIds.has(recordId) && record.expiryDate >= today;
-    const status = isActive
+    const recordId  = record.id || `ticket-${record.ticketNumber}`;
+    const isActive  = activeIds.has(recordId) && record.expiryDate >= today;
+    const statusBadge = isActive
       ? '<span class="monthly-driver-status monthly-driver-status--active">ACTIVA</span>'
       : `<span class="monthly-driver-status monthly-driver-status--expired">${record.expiryDate < today ? "VENCIDA" : "FINALIZADA"}</span>`;
 
     return `<article class="monthly-driver-card">
       <div class="monthly-driver-card__header">
         <strong>MEN-${escapeHtml(record.ticketNumber)}</strong>
-        ${status}
+        ${statusBadge}
+        <div class="monthly-driver-card__actions">
+          <button class="manage-charges-btn" data-record-key="${escapeHtml(recordId)}" type="button">💰 GESTIONAR COBROS</button>
+        </div>
       </div>
       <dl>
         <div><dt>RESPONSABLE</dt><dd>${escapeHtml(record.responsible)}</dd></div>
         <div><dt>DOCUMENTO</dt><dd>${escapeHtml(record.document)}</dd></div>
         <div><dt>CONTACTO</dt><dd>${escapeHtml(record.contact)}</dd></div>
         <div><dt>DIRECCIÓN</dt><dd>${escapeHtml(record.address)}</dd></div>
+        <div><dt>PLACA</dt><dd>${escapeHtml(record.plate)}</dd></div>
+        <div><dt>TARIFA</dt><dd>${formatCurrency(record.monthlyRate)}</dd></div>
+        <div><dt>INICIO</dt><dd>${formatDateDisplay(record.startDate)}</dd></div>
+        <div><dt>VENCIMIENTO</dt><dd>${formatDateDisplay(record.expiryDate)}</dd></div>
       </dl>
     </article>`;
   }).join("");
+}
+
+// ================================================================
+// GESTIONAR COBROS — Modal
+// ================================================================
+
+function openChargeModal(record) {
+  pendingChargeRecord = record;
+  const recordId = record.id || `ticket-${record.ticketNumber}`;
+
+  chargeModalDriverInfo.innerHTML = `
+    <span class="charge-modal-plate">${escapeHtml(record.plate)}</span>
+    <span class="charge-modal-sep">•</span>
+    <span class="charge-modal-name">${escapeHtml(record.responsible || "CONDUCTOR")}</span>
+    <span class="charge-modal-sep">•</span>
+    <span class="charge-modal-ticket">TICKET ACTUAL: MEN-${escapeHtml(String(record.ticketNumber))}</span>`;
+
+  monthlyChargeMessage.textContent = "";
+  renderChargeList(record);
+
+  monthlyChargeModal.hidden        = false;
+  document.body.style.overflow     = "hidden";
+}
+
+function renderChargeList(record) {
+  const recordId = record.id || `ticket-${record.ticketNumber}`;
+  const charges = MPTStorage.getMonthlyCharges ? MPTStorage.getMonthlyCharges() : [];
+  
+  // Buscar cobros asociados a este id de mensualidad, o al mismo documento/placa si es el mismo conductor
+  let mine = charges.filter((c) => {
+    if (String(c.monthlyId) === String(recordId)) return true;
+    if (record.id && String(c.monthlyId) === String(record.id)) return true;
+    return false;
+  });
+
+  // Si no hay cobros creados para este registro, crear el cobro inicial automáticamente
+  if (mine.length === 0 && Number(record.monthlyRate) > 0) {
+    const initialCharge = {
+      id:           `charge-${recordId}`,
+      monthlyId:    recordId,
+      ticketNumber: record.ticketNumber,
+      amount:       Number(record.monthlyRate),
+      status:       "POR_COBRAR",
+      paidAt:       null,
+      createdAt:    record.createdAt || new Date().toISOString(),
+    };
+    charges.unshift(initialCharge);
+    if (MPTStorage.saveMonthlyCharges) {
+      MPTStorage.saveMonthlyCharges(charges);
+    }
+    mine = [initialCharge];
+  }
+
+  if (mine.length === 0) {
+    chargeList.innerHTML = `<p class="charge-list-empty">No hay cobros registrados para esta mensualidad.<br>
+      <small>Los cobros se crean automáticamente al registrar o renovar.</small></p>`;
+    return;
+  }
+
+  chargeList.innerHTML = mine.map((charge) => {
+    const isPending     = charge.status !== "PAGADO";
+    const amountFmt     = formatCurrency(charge.amount);
+    const ticketLabel   = charge.ticketNumber ? `MEN-${charge.ticketNumber}` : (record.ticketNumber ? `MEN-${record.ticketNumber}` : "MEN-?");
+
+    return `<div class="charge-item ${isPending ? "charge-item--pending" : "charge-item--paid"}" data-charge-id="${charge.id}">
+      <div class="charge-item-info">
+        <div class="charge-item-ticket-badge">
+          <span class="charge-item-ticket-label">TICKET</span>
+          <strong class="charge-item-ticket-number">${escapeHtml(ticketLabel)}</strong>
+        </div>
+        <div class="charge-item-value-box">
+          <span class="charge-item-value-label">VALOR MES</span>
+          <strong class="charge-item-amount charge-amount--red">${amountFmt}</strong>
+        </div>
+        ${charge.paidAt ? `<span class="charge-item-date">✅ Pagado: ${new Date(charge.paidAt).toLocaleDateString("es-CO")}</span>` : `<span class="charge-item-date charge-item-date--pending">⏳ Pendiente de cobro</span>`}
+      </div>
+      <div class="charge-item-actions">
+        <button class="charge-status-btn charge-btn--pending ${isPending ? "charge-btn--active" : ""}"
+                data-charge-id="${charge.id}" data-status="POR_COBRAR" type="button">POR COBRAR</button>
+        <button class="charge-status-btn charge-btn--paid ${!isPending ? "charge-btn--active" : ""}"
+                data-charge-id="${charge.id}" data-status="PAGADO" type="button">PAGADO</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function closeChargeModal() {
+  monthlyChargeModal.hidden        = true;
+  document.body.style.overflow     = "";
+  pendingChargeRecord              = null;
+  if (monthlyChargeMessage) monthlyChargeMessage.textContent = "";
+}
+
+async function handleChargeStatusUpdate(chargeId, status) {
+  monthlyChargeMessage.textContent = "";
+
+  try {
+    if (MPTStorage.hasJwtSession()) {
+      await MPTStorage.updateMonthlyCharge(chargeId, status);
+    } else {
+      // Modo local
+      const charges = MPTStorage.getMonthlyCharges();
+      const idx     = charges.findIndex((c) => String(c.id) === String(chargeId));
+      if (idx !== -1) {
+        charges[idx].status = status;
+        charges[idx].paidAt = status === "PAGADO" ? new Date().toISOString() : null;
+        MPTStorage.saveMonthlyCharges(charges);
+      }
+    }
+
+    if (pendingChargeRecord) {
+      renderChargeList(pendingChargeRecord);
+    }
+
+    monthlyChargeMessage.textContent = status === "PAGADO"
+      ? "✅ Cobro marcado como PAGADO."
+      : "🔴 Cobro marcado como POR COBRAR.";
+    monthlyChargeMessage.className = "form-message" + (status === "PAGADO" ? " is-success" : "");
+
+  } catch (err) {
+    monthlyChargeMessage.textContent = err.message || "No fue posible actualizar el estado del cobro.";
+    monthlyChargeMessage.className   = "form-message";
+  }
+}
+
+// ================================================================
+// RENOVAR MENSUALIDAD
+// ================================================================
+
+/**
+ * Modo local: crea un nuevo registro iniciando desde expiryDate del anterior.
+ * El nuevo mes SIEMPRE arranca en la fecha de vencimiento del mes anterior.
+ */
+function renewMonthlyLocal(record) {
+  const records = getMonthlyRecords();
+
+  const newStartDate  = record.expiryDate;           // Fecha exacta de vencimiento anterior
+  const newExpiryDate = addOneMonth(newStartDate);    // + 1 mes calendario
+  const newTicketNum  = getNextTicketNumber();
+  const newId         = `ticket-${newTicketNum}-${Date.now()}`;
+
+  const newRecord = {
+    id:            newId,
+    ticketNumber:  newTicketNum,
+    plate:         record.plate,
+    vehicleType:   record.vehicleType,
+    startDate:     newStartDate,
+    expiryDate:    newExpiryDate,
+    monthlyRate:   record.monthlyRate,
+    responsible:   record.responsible,
+    document:      record.document,
+    contact:       record.contact,
+    address:       record.address,
+    user:          MPTStorage.getActiveUserName(),
+    renewedFromId: record.id,
+    createdAt:     new Date().toISOString(),
+  };
+
+  records.unshift(newRecord);
+  saveMonthlyRecords(records);
+
+  // Crear cobro automático por la renovación
+  if (MPTStorage.getMonthlyCharges && MPTStorage.saveMonthlyCharges) {
+    const charges = MPTStorage.getMonthlyCharges();
+    charges.unshift({
+      id:            `charge-${Date.now()}`,
+      monthlyId:     newId,
+      ticketNumber:  newTicketNum,
+      amount:        record.monthlyRate,
+      status:        "POR_COBRAR",
+      paidAt:        null,
+      createdAt:     new Date().toISOString(),
+    });
+    MPTStorage.saveMonthlyCharges(charges);
+  }
+
+  return newRecord;
+}
+
+async function handleRenew(record) {
+  const newStart = record.expiryDate;
+  const newExpiry = addOneMonth(newStart);
+
+  const confirmMsg =
+    `¿Renovar mensualidad?\n\n` +
+    `Placa: ${record.plate}\n` +
+    `Tarifa: ${formatCurrency(record.monthlyRate)}\n` +
+    `Nuevo inicio: ${formatDateDisplay(newStart)}\n` +
+    `Nuevo vencimiento: ${formatDateDisplay(newExpiry)}`;
+
+  if (!window.confirm(confirmMsg)) return;
+
+  mFormMessage.textContent = "";
+  mFormMessage.className   = "form-message";
+
+  try {
+    let newRecord;
+    if (MPTStorage.hasJwtSession()) {
+      newRecord = await MPTStorage.renewMonthly(record.id);
+    } else {
+      newRecord = renewMonthlyLocal(record);
+    }
+
+    mFormMessage.textContent =
+      `✅ Renovación exitosa: MEN-${newRecord.ticketNumber} | ${record.plate} | Vence: ${formatDateDisplay(newRecord.expiryDate)}`;
+    mFormMessage.className = "form-message is-success";
+
+    renderActiveSubscriptions();
+    renderCalendar();
+    renderHistory();
+    renderMonthlyDrivers();
+
+  } catch (err) {
+    mFormMessage.textContent = err.message || "No fue posible renovar la mensualidad.";
+    mFormMessage.className   = "form-message";
+  }
 }
 
 // ================================================================
@@ -442,10 +679,6 @@ confirmExitBtn.addEventListener("click", async () => {
 
 // ================================================================
 // MODAL: ELIMINAR CON VERIFICACION DE ROL
-//
-// Fase demo: verifica rol "admin" en sesion + formato de contrasena.
-// TODO (fase backend): reemplazar por DELETE /api/monthly/:id
-//   con Authorization: Bearer <token>. El backend valida el rol.
 // ================================================================
 
 function openDeleteModal() {
@@ -479,7 +712,6 @@ deleteForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Verificar formato de contrasena (sin exponer el valor exacto en codigo)
   const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
   if (!passwordPattern.test(developerPasswordInput.value)) {
     deleteMessage.textContent = "Contrasena incorrecta o formato invalido.";
@@ -532,12 +764,20 @@ deleteForm.addEventListener("submit", async (e) => {
 });
 
 // ================================================================
-// DELEGACION DE EVENTOS: TABLA ACTIVOS
+// DELEGACION DE EVENTOS — TABLA ACTIVOS
 // ================================================================
 
 activeBody.addEventListener("click", (e) => {
+  const renewBtn  = e.target.closest(".monthly-renew-btn");
   const closeBtn  = e.target.closest(".monthly-close-btn");
   const deleteBtn = e.target.closest(".monthly-delete-btn");
+
+  if (renewBtn) {
+    const records = getMonthlyRecords();
+    const record  = records[Number(renewBtn.dataset.index)];
+    if (record) handleRenew(record);
+    return;
+  }
 
   if (closeBtn) {
     openExitModal(Number(closeBtn.dataset.index));
@@ -551,15 +791,62 @@ activeBody.addEventListener("click", (e) => {
 });
 
 // ================================================================
-// DELEGACION DE EVENTOS: TABLA HISTORICO
+// DELEGACION DE EVENTOS — TABLA HISTORICO
 // ================================================================
 
 historyTableWrap.addEventListener("click", (e) => {
+  const renewBtn  = e.target.closest(".hist-renew-btn");
   const deleteBtn = e.target.closest(".hist-delete-btn");
-  if (!deleteBtn) return;
-  pendingDelete = { type: "history", index: Number(deleteBtn.dataset.index) };
-  openDeleteModal();
+
+  if (renewBtn) {
+    const history = getMonthlyHistory();
+    const record  = history[Number(renewBtn.dataset.index)];
+    if (record) handleRenew(record);
+    return;
+  }
+
+  if (deleteBtn) {
+    pendingDelete = { type: "history", index: Number(deleteBtn.dataset.index) };
+    openDeleteModal();
+  }
 });
+
+// ================================================================
+// DELEGACION DE EVENTOS — CONDUCTORES (tarjetas)
+// ================================================================
+
+monthlyDriversList.addEventListener("click", (e) => {
+  const chargesBtn = e.target.closest(".manage-charges-btn");
+  if (!chargesBtn) return;
+
+  const recordKey = chargesBtn.dataset.recordKey;
+  const allRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
+  const record = allRecords.find(
+    (r) => String(r.id || `ticket-${r.ticketNumber}`) === String(recordKey)
+  );
+  if (record) openChargeModal(record);
+});
+
+// ================================================================
+// DELEGACION DE EVENTOS — MODAL DE COBROS (lista de cobros)
+// ================================================================
+
+if (monthlyChargeModal) {
+  monthlyChargeModal.addEventListener("click", (e) => {
+    // Cerrar al hacer clic en el overlay
+    if (e.target === monthlyChargeModal) { closeChargeModal(); return; }
+
+    // Botones de estado de cobro
+    const statusBtn = e.target.closest(".charge-status-btn");
+    if (statusBtn) {
+      handleChargeStatusUpdate(statusBtn.dataset.chargeId, statusBtn.dataset.status);
+    }
+  });
+}
+
+if (closeMonthlyCharge) {
+  closeMonthlyCharge.addEventListener("click", closeChargeModal);
+}
 
 // ================================================================
 // NAVEGACION DEL CALENDARIO
@@ -640,16 +927,36 @@ monthlyForm.addEventListener("submit", async (e) => {
   try {
     if (MPTStorage.hasJwtSession()) {
       const persisted = await MPTStorage.createMonthly(newRecord);
+      newRecord.id           = persisted.id;
       newRecord.ticketNumber = persisted.ticketNumber;
+      // El cobro se crea en el backend y se guarda en storage vía createMonthly
     } else {
+      newRecord.id = `ticket-${newRecord.ticketNumber}-${Date.now()}`;
       records.unshift(newRecord);
       saveMonthlyRecords(records);
+
+      // Crear cobro local automático
+      if (MPTStorage.getMonthlyCharges && MPTStorage.saveMonthlyCharges) {
+        const localCharges = MPTStorage.getMonthlyCharges();
+        localCharges.unshift({
+          id:           `charge-${Date.now()}`,
+          monthlyId:    newRecord.id,
+          ticketNumber: newRecord.ticketNumber,
+          amount:       rateRaw,
+          status:       "POR_COBRAR",
+          paidAt:       null,
+          createdAt:    new Date().toISOString(),
+        });
+        MPTStorage.saveMonthlyCharges(localCharges);
+      }
     }
   } catch (error) {
     mFormMessage.textContent = error.message || 'No fue posible registrar la mensualidad en el servidor.';
     return;
   }
+
   mFormMessage.textContent = `Mensualidad MEN-${newRecord.ticketNumber} registrada para ${plate}. Vence: ${formatDateDisplay(expiryDate)}.`;
+  mFormMessage.className   = "form-message is-success";
   monthlyForm.reset();
   mStartDateInput.value = getTodayStr();
   renderActiveSubscriptions();
@@ -695,17 +1002,20 @@ logoutButton.addEventListener("click", () => {
   window.location.href = "../../index.html";
 });
 
+// Escape cierra modales
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!monthlyChargeModal.hidden) closeChargeModal();
+});
+
 // ================================================================
 // INICIALIZACION
 // ================================================================
 
 async function init() {
   await MPTStorage.hydrateFromServer();
-  // Fecha de hoy como valor por defecto del campo de inicio
   mStartDateInput.value = getTodayStr();
-  // Mover a historico los vencidos automaticamente
   await checkExpiredSubscriptions();
-  // Renderizar
   renderCalendar();
   renderActiveSubscriptions();
   renderHistory();
