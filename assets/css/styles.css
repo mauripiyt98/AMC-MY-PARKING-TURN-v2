@@ -1586,7 +1586,19 @@ body:has(.report-panel) .report-panel {
 }
 
 .monthly-history-table {
-  min-width: 860px;
+  min-width: 980px;
+}
+
+.monthly-history-table .pdf-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.monthly-history-table .pdf-action {
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 11px;
 }
 
 .modal-subtext {

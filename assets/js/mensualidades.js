@@ -333,7 +333,7 @@ function renderHistory() {
   if (mSummaryTotal)   mSummaryTotal.textContent    = formatCurrency(total);
 
   if (filtered.length === 0) {
-    historyBody.innerHTML = `<tr class="empty-record"><td colspan="8">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
+    historyBody.innerHTML = `<tr class="empty-record"><td colspan="9">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
     return;
   }
 
@@ -345,6 +345,7 @@ function renderHistory() {
     <td>${formatDateDisplay(record.closedDate || record.expiryDate)}</td>
     <td>${formatCurrency(record.monthlyRate)}</td>
     <td>${record.closedReason || "CIERRE MANUAL"}</td>
+    <td class="pdf-cell"><button class="pdf-action hist-pdf-btn" data-index="${originalIndex}" type="button" title="Descargar comprobante PDF de esta mensualidad">📄 PDF</button></td>
     <td><button class="delete-action hist-delete-btn" data-index="${originalIndex}" type="button">ELIMINAR</button></td>
   </tr>`).join("");
 }
@@ -852,8 +853,33 @@ activeBody.addEventListener("click", (e) => {
 // DELEGACION DE EVENTOS — TABLA HISTORICO
 // ================================================================
 
+/**
+ * Genera y descarga un comprobante PDF de mensualidad con la
+ * misma estructura visual del ticket clásico del sistema.
+ */
+async function downloadMonthlyPdf(record) {
+  if (typeof MPTTicketPdf === "undefined" || !MPTTicketPdf.downloadMonthly) {
+    alert("El generador de PDF no está disponible. Recarga la página.");
+    return;
+  }
+  try {
+    await MPTTicketPdf.downloadMonthly(record);
+  } catch (err) {
+    alert(`No fue posible generar el PDF: ${err.message || err}`);
+  }
+}
+
 historyTableWrap.addEventListener("click", (e) => {
+  const pdfBtn    = e.target.closest(".hist-pdf-btn");
   const deleteBtn = e.target.closest(".hist-delete-btn");
+
+  if (pdfBtn) {
+    const idx     = Number(pdfBtn.dataset.index);
+    const history = getMonthlyHistory();
+    const record  = history[idx];
+    if (record) downloadMonthlyPdf(record);
+    return;
+  }
 
   if (deleteBtn) {
     pendingDelete = { type: "history", index: Number(deleteBtn.dataset.index) };
