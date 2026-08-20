@@ -274,24 +274,18 @@ function renderActiveSubscriptions() {
     : mapped;
 
   if (records.length === 0) {
-    activeBody.innerHTML = `<tr class="empty-record"><td colspan="11">AUN NO HAY MENSUALIDADES REGISTRADAS</td></tr>`;
+    activeBody.innerHTML = `<tr class="empty-record"><td colspan="10">AUN NO HAY MENSUALIDADES REGISTRADAS</td></tr>`;
     return;
   }
 
   if (filtered.length === 0) {
-    activeBody.innerHTML = `<tr class="empty-record"><td colspan="11">NO HAY MENSUALIDADES PARA ESA PLACA</td></tr>`;
+    activeBody.innerHTML = `<tr class="empty-record"><td colspan="10">NO HAY MENSUALIDADES PARA ESA PLACA</td></tr>`;
     return;
   }
 
   activeBody.innerHTML = filtered.map(({ record, index }) => {
     const days          = getDaysRemaining(record.expiryDate);
     const { text, cls } = getStatusInfo(days);
-
-    // RENOVAR: solo habilitado cuando vencida (days <= 0)
-    const canRenew = days <= 0;
-    const renewBtn = canRenew
-      ? `<button class="renew-action monthly-renew-btn" data-index="${index}" type="button" title="Renovar mensualidad desde ${record.expiryDate}">🔄 RENOVAR</button>`
-      : `<button class="renew-action renew-action--disabled" disabled type="button" title="La mensualidad aún está activa">🔄 RENOVAR</button>`;
 
     return `<tr>
       <td>MEN-${record.ticketNumber}</td>
@@ -302,7 +296,6 @@ function renderActiveSubscriptions() {
       <td>${formatCurrency(record.monthlyRate)}</td>
       <td><span class="status-badge ${cls}">${text}</span></td>
       <td>${record.user}</td>
-      <td>${renewBtn}</td>
       <td><button class="exit-action monthly-close-btn" data-index="${index}" type="button">CERRAR</button></td>
       <td><button class="delete-action monthly-delete-btn" data-index="${index}" data-type="active" type="button">ELIMINAR</button></td>
     </tr>`;
@@ -310,7 +303,7 @@ function renderActiveSubscriptions() {
 }
 
 // ================================================================
-// RENDER HISTORICO  (incluye columna RENOVAR habilitado)
+// RENDER HISTORICO
 // ================================================================
 
 function renderHistory() {
@@ -340,7 +333,7 @@ function renderHistory() {
   if (mSummaryTotal)   mSummaryTotal.textContent    = formatCurrency(total);
 
   if (filtered.length === 0) {
-    historyBody.innerHTML = `<tr class="empty-record"><td colspan="9">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
+    historyBody.innerHTML = `<tr class="empty-record"><td colspan="8">NO HAY HISTORICOS EN EL PERIODO SELECCIONADO</td></tr>`;
     return;
   }
 
@@ -352,34 +345,58 @@ function renderHistory() {
     <td>${formatDateDisplay(record.closedDate || record.expiryDate)}</td>
     <td>${formatCurrency(record.monthlyRate)}</td>
     <td>${record.closedReason || "CIERRE MANUAL"}</td>
-    <td><button class="renew-action hist-renew-btn" data-index="${originalIndex}" type="button" title="Renovar: nuevo mes desde ${record.expiryDate}">🔄 RENOVAR</button></td>
     <td><button class="delete-action hist-delete-btn" data-index="${originalIndex}" type="button">ELIMINAR</button></td>
   </tr>`).join("");
 }
 
 // ================================================================
-// RENDER CONDUCTORES  (incluye botón GESTIONAR COBROS)
+// RENDER CONDUCTORES  (incluye GESTIONAR COBROS y RENOVAR)
 // ================================================================
 
 function renderMonthlyDrivers() {
   if (!monthlyDriversList) return;
 
-  const today    = getTodayStr();
-  const activeIds = new Set(getMonthlyRecords().map((r) => r.id || `ticket-${r.ticketNumber}`));
-  const records  = [...getMonthlyRecords(), ...getMonthlyHistory()]
-    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const today       = getTodayStr();
+  const activeRecords = getMonthlyRecords();
+  const historyRecords = getMonthlyHistory();
+  const activeIds   = new Set(activeRecords.map((r) => r.id || `ticket-${r.ticketNumber}`));
 
-  if (records.length === 0) {
+  const allRecords  = [...activeRecords, ...historyRecords]
+    .sort((a, b) => {
+      // Priorizar los activos primero
+      const aActive = activeIds.has(a.id || `ticket-${a.ticketNumber}`) && a.expiryDate >= today ? 1 : 0;
+      const bActive = activeIds.has(b.id || `ticket-${b.ticketNumber}`) && b.expiryDate >= today ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+      return String(b.createdAt || b.startDate || "").localeCompare(String(a.createdAt || a.startDate || ""));
+    });
+
+  if (allRecords.length === 0) {
     monthlyDriversList.innerHTML = '<p class="monthly-drivers-empty">AÚN NO HAY CONDUCTORES REGISTRADOS EN MENSUALIDADES.</p>';
     return;
   }
 
-  monthlyDriversList.innerHTML = records.map((record) => {
-    const recordId  = record.id || `ticket-${record.ticketNumber}`;
-    const isActive  = activeIds.has(recordId) && record.expiryDate >= today;
+  // Agrupar por conductor único (documento o placa) para mostrar su estado actual
+  const seenDrivers = new Map();
+  for (const record of allRecords) {
+    const key = String(record.document || record.plate || record.id || record.ticketNumber).trim().toUpperCase();
+    if (!seenDrivers.has(key)) {
+      seenDrivers.set(key, record);
+    }
+  }
+
+  const driverCards = Array.from(seenDrivers.values());
+
+  monthlyDriversList.innerHTML = driverCards.map((record) => {
+    const recordId    = record.id || `ticket-${record.ticketNumber}`;
+    const isActive    = activeIds.has(recordId) && record.expiryDate >= today;
     const statusBadge = isActive
       ? '<span class="monthly-driver-status monthly-driver-status--active">ACTIVA</span>'
       : `<span class="monthly-driver-status monthly-driver-status--expired">${record.expiryDate < today ? "VENCIDA" : "FINALIZADA"}</span>`;
+
+    // Botón RENOVAR: deshabilitado si está activa, habilitado si está vencida/finalizada
+    const renewBtn = isActive
+      ? `<button class="renew-action renew-action--disabled" disabled type="button" title="La mensualidad aún está activa. Solo se puede renovar cuando esté vencida.">🔄 RENOVAR</button>`
+      : `<button class="renew-action monthly-driver-renew-btn" data-record-key="${escapeHtml(recordId)}" type="button" title="Renovar mensualidad desde ${record.expiryDate}">🔄 RENOVAR</button>`;
 
     return `<article class="monthly-driver-card">
       <div class="monthly-driver-card__header">
@@ -387,6 +404,7 @@ function renderMonthlyDrivers() {
         ${statusBadge}
         <div class="monthly-driver-card__actions">
           <button class="manage-charges-btn" data-record-key="${escapeHtml(recordId)}" type="button">💰 GESTIONAR COBROS</button>
+          ${renewBtn}
         </div>
       </div>
       <dl>
@@ -429,12 +447,20 @@ function renderChargeList(record) {
   const recordId = record.id || `ticket-${record.ticketNumber}`;
   const charges = MPTStorage.getMonthlyCharges ? MPTStorage.getMonthlyCharges() : [];
   
-  // Buscar cobros asociados a este id de mensualidad, o al mismo documento/placa si es el mismo conductor
-  let mine = charges.filter((c) => {
-    if (String(c.monthlyId) === String(recordId)) return true;
-    if (record.id && String(c.monthlyId) === String(record.id)) return true;
-    return false;
-  });
+  // Buscar todos los tickets asociados a este conductor (por placa o documento)
+  const allDriverMonthlyIds = new Set(
+    [...getMonthlyRecords(), ...getMonthlyHistory()]
+      .filter((r) => (
+        (record.document && r.document && r.document.trim() === record.document.trim()) ||
+        (record.plate && r.plate && r.plate.trim().toUpperCase() === record.plate.trim().toUpperCase()) ||
+        String(r.id || `ticket-${r.ticketNumber}`) === String(recordId)
+      ))
+      .map((r) => String(r.id || `ticket-${r.ticketNumber}`))
+  );
+  allDriverMonthlyIds.add(String(recordId));
+  if (record.id) allDriverMonthlyIds.add(String(record.id));
+
+  let mine = charges.filter((c) => allDriverMonthlyIds.has(String(c.monthlyId)));
 
   // Si no hay cobros creados para este registro, crear el cobro inicial automáticamente
   if (mine.length === 0 && Number(record.monthlyRate) > 0) {
@@ -772,13 +798,6 @@ activeBody.addEventListener("click", (e) => {
   const closeBtn  = e.target.closest(".monthly-close-btn");
   const deleteBtn = e.target.closest(".monthly-delete-btn");
 
-  if (renewBtn) {
-    const records = getMonthlyRecords();
-    const record  = records[Number(renewBtn.dataset.index)];
-    if (record) handleRenew(record);
-    return;
-  }
-
   if (closeBtn) {
     openExitModal(Number(closeBtn.dataset.index));
     return;
@@ -795,15 +814,7 @@ activeBody.addEventListener("click", (e) => {
 // ================================================================
 
 historyTableWrap.addEventListener("click", (e) => {
-  const renewBtn  = e.target.closest(".hist-renew-btn");
   const deleteBtn = e.target.closest(".hist-delete-btn");
-
-  if (renewBtn) {
-    const history = getMonthlyHistory();
-    const record  = history[Number(renewBtn.dataset.index)];
-    if (record) handleRenew(record);
-    return;
-  }
 
   if (deleteBtn) {
     pendingDelete = { type: "history", index: Number(deleteBtn.dataset.index) };
@@ -817,14 +828,26 @@ historyTableWrap.addEventListener("click", (e) => {
 
 monthlyDriversList.addEventListener("click", (e) => {
   const chargesBtn = e.target.closest(".manage-charges-btn");
-  if (!chargesBtn) return;
+  const renewBtn   = e.target.closest(".monthly-driver-renew-btn");
 
-  const recordKey = chargesBtn.dataset.recordKey;
-  const allRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
-  const record = allRecords.find(
-    (r) => String(r.id || `ticket-${r.ticketNumber}`) === String(recordKey)
-  );
-  if (record) openChargeModal(record);
+  if (chargesBtn) {
+    const recordKey = chargesBtn.dataset.recordKey;
+    const allRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
+    const record = allRecords.find(
+      (r) => String(r.id || `ticket-${r.ticketNumber}`) === String(recordKey)
+    );
+    if (record) openChargeModal(record);
+    return;
+  }
+
+  if (renewBtn) {
+    const recordKey = renewBtn.dataset.recordKey;
+    const allRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
+    const record = allRecords.find(
+      (r) => String(r.id || `ticket-${r.ticketNumber}`) === String(recordKey)
+    );
+    if (record) handleRenew(record);
+  }
 });
 
 // ================================================================
