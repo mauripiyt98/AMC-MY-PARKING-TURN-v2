@@ -426,82 +426,121 @@ function renderMonthlyDrivers() {
 // ================================================================
 
 function openChargeModal(record) {
-  pendingChargeRecord = record;
-  const recordId = record.id || `ticket-${record.ticketNumber}`;
+  const allMonthlyRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
+  const driverRecords = allMonthlyRecords.filter((r) => (
+    (record.document && r.document && String(r.document).trim() === String(record.document).trim()) ||
+    (record.plate && r.plate && String(r.plate).trim().toUpperCase() === String(record.plate).trim().toUpperCase()) ||
+    (record.id && r.id && String(r.id) === String(record.id)) ||
+    (record.ticketNumber && r.ticketNumber && Number(r.ticketNumber) === Number(record.ticketNumber))
+  ));
+  driverRecords.sort((a, b) => Number(b.ticketNumber || 0) - Number(a.ticketNumber || 0));
+  const latestRecord = driverRecords[0] || record;
+  pendingChargeRecord = latestRecord;
 
   chargeModalDriverInfo.innerHTML = `
-    <span class="charge-modal-plate">${escapeHtml(record.plate)}</span>
+    <span class="charge-modal-plate">${escapeHtml(latestRecord.plate)}</span>
     <span class="charge-modal-sep">•</span>
-    <span class="charge-modal-name">${escapeHtml(record.responsible || "CONDUCTOR")}</span>
+    <span class="charge-modal-name">${escapeHtml(latestRecord.responsible || "CONDUCTOR")}</span>
     <span class="charge-modal-sep">•</span>
-    <span class="charge-modal-ticket">TICKET ACTUAL: MEN-${escapeHtml(String(record.ticketNumber))}</span>`;
+    <span class="charge-modal-ticket">ÚLTIMO TICKET: MEN-${escapeHtml(String(latestRecord.ticketNumber))}</span>`;
 
   monthlyChargeMessage.textContent = "";
-  renderChargeList(record);
+  renderChargeList(latestRecord);
 
   monthlyChargeModal.hidden        = false;
   document.body.style.overflow     = "hidden";
 }
 
 function renderChargeList(record) {
-  const recordId = record.id || `ticket-${record.ticketNumber}`;
-  const charges = MPTStorage.getMonthlyCharges ? MPTStorage.getMonthlyCharges() : [];
+  const allMonthlyRecords = [...getMonthlyRecords(), ...getMonthlyHistory()];
   
-  // Buscar todos los tickets asociados a este conductor (por placa o documento)
-  const allDriverMonthlyIds = new Set(
-    [...getMonthlyRecords(), ...getMonthlyHistory()]
-      .filter((r) => (
-        (record.document && r.document && r.document.trim() === record.document.trim()) ||
-        (record.plate && r.plate && r.plate.trim().toUpperCase() === record.plate.trim().toUpperCase()) ||
-        String(r.id || `ticket-${r.ticketNumber}`) === String(recordId)
-      ))
-      .map((r) => String(r.id || `ticket-${r.ticketNumber}`))
-  );
-  allDriverMonthlyIds.add(String(recordId));
-  if (record.id) allDriverMonthlyIds.add(String(record.id));
+  // Encontrar todas las mensualidades pertenecientes a este conductor (por placa o documento o ticketNumber)
+  const driverMonthlyRecords = allMonthlyRecords.filter((r) => {
+    if (record.document && r.document && String(r.document).trim() === String(record.document).trim()) return true;
+    if (record.plate && r.plate && String(r.plate).trim().toUpperCase() === String(record.plate).trim().toUpperCase()) return true;
+    if (record.id && r.id && String(r.id) === String(record.id)) return true;
+    if (record.ticketNumber && r.ticketNumber && Number(r.ticketNumber) === Number(record.ticketNumber)) return true;
+    return false;
+  });
 
-  let mine = charges.filter((c) => allDriverMonthlyIds.has(String(c.monthlyId)));
-
-  // Si no hay cobros creados para este registro, crear el cobro inicial automáticamente
-  if (mine.length === 0 && Number(record.monthlyRate) > 0) {
-    const initialCharge = {
-      id:           `charge-${recordId}`,
-      monthlyId:    recordId,
-      ticketNumber: record.ticketNumber,
-      amount:       Number(record.monthlyRate),
-      status:       "POR_COBRAR",
-      paidAt:       null,
-      createdAt:    record.createdAt || new Date().toISOString(),
-    };
-    charges.unshift(initialCharge);
-    if (MPTStorage.saveMonthlyCharges) {
-      MPTStorage.saveMonthlyCharges(charges);
-    }
-    mine = [initialCharge];
+  // Si por alguna razón el registro actual no está en la lista filtrada, agregarlo
+  if (!driverMonthlyRecords.some((r) => String(r.id || r.ticketNumber) === String(record.id || record.ticketNumber))) {
+    driverMonthlyRecords.push(record);
   }
 
-  if (mine.length === 0) {
+  // Ordenar los tickets de más reciente a más antiguo
+  driverMonthlyRecords.sort((a, b) => Number(b.ticketNumber || 0) - Number(a.ticketNumber || 0));
+
+  const allCharges = MPTStorage.getMonthlyCharges ? MPTStorage.getMonthlyCharges() : [];
+  let chargesUpdated = false;
+  const displayItems = [];
+
+  for (const mRec of driverMonthlyRecords) {
+    const mRecId = mRec.id || `ticket-${mRec.ticketNumber}`;
+    
+    // Buscar si ya existe un cobro para este ticket
+    let charge = allCharges.find((c) => 
+      String(c.monthlyId) === String(mRecId) ||
+      (mRec.id && String(c.monthlyId) === String(mRec.id)) ||
+      (c.ticketNumber && Number(c.ticketNumber) === Number(mRec.ticketNumber)) ||
+      String(c.id) === `charge-${mRecId}` ||
+      String(c.id) === `charge-${mRec.id}` ||
+      String(c.id) === `charge-${mRec.ticketNumber}`
+    );
+
+    // Si no existe, crearlo automáticamente
+    if (!charge && Number(mRec.monthlyRate) > 0) {
+      charge = {
+        id:           `charge-${mRecId}`,
+        monthlyId:    mRecId,
+        ticketNumber: mRec.ticketNumber,
+        amount:       Number(mRec.monthlyRate),
+        status:       "POR_COBRAR",
+        paidAt:       null,
+        createdAt:    mRec.createdAt || new Date().toISOString(),
+      };
+      allCharges.unshift(charge);
+      chargesUpdated = true;
+    }
+
+    if (charge) {
+      displayItems.push({ charge, record: mRec });
+    }
+  }
+
+  if (chargesUpdated && MPTStorage.saveMonthlyCharges) {
+    MPTStorage.saveMonthlyCharges(allCharges);
+  }
+
+  if (displayItems.length === 0) {
     chargeList.innerHTML = `<p class="charge-list-empty">No hay cobros registrados para esta mensualidad.<br>
       <small>Los cobros se crean automáticamente al registrar o renovar.</small></p>`;
     return;
   }
 
-  chargeList.innerHTML = mine.map((charge) => {
-    const isPending     = charge.status !== "PAGADO";
-    const amountFmt     = formatCurrency(charge.amount);
-    const ticketLabel   = charge.ticketNumber ? `MEN-${charge.ticketNumber}` : (record.ticketNumber ? `MEN-${record.ticketNumber}` : "MEN-?");
+  chargeList.innerHTML = displayItems.map(({ charge, record: mRec }) => {
+    const isPending   = charge.status !== "PAGADO";
+    const amountFmt   = formatCurrency(charge.amount || mRec.monthlyRate);
+    const ticketLabel = mRec.ticketNumber ? `MEN-${mRec.ticketNumber}` : (charge.ticketNumber ? `MEN-${charge.ticketNumber}` : "MEN-?");
+    const periodText  = (mRec.startDate && mRec.expiryDate)
+      ? `${formatDateDisplay(mRec.startDate)} → ${formatDateDisplay(mRec.expiryDate)}`
+      : "";
 
     return `<div class="charge-item ${isPending ? "charge-item--pending" : "charge-item--paid"}" data-charge-id="${charge.id}">
-      <div class="charge-item-info">
-        <div class="charge-item-ticket-badge">
-          <span class="charge-item-ticket-label">TICKET</span>
-          <strong class="charge-item-ticket-number">${escapeHtml(ticketLabel)}</strong>
+      <div class="charge-item-left">
+        <div class="charge-item-header-row">
+          <span class="charge-item-badge">${escapeHtml(ticketLabel)}</span>
+          ${periodText ? `<span class="charge-item-period">${escapeHtml(periodText)}</span>` : ""}
         </div>
-        <div class="charge-item-value-box">
-          <span class="charge-item-value-label">VALOR MES</span>
-          <strong class="charge-item-amount charge-amount--red">${amountFmt}</strong>
+        <div class="charge-item-status-row">
+          ${charge.paidAt
+            ? `<span class="charge-status-pill charge-status-pill--paid">✅ Pagado: ${new Date(charge.paidAt).toLocaleDateString("es-CO")}</span>`
+            : `<span class="charge-status-pill charge-status-pill--pending">⏳ Por Cobrar</span>`}
         </div>
-        ${charge.paidAt ? `<span class="charge-item-date">✅ Pagado: ${new Date(charge.paidAt).toLocaleDateString("es-CO")}</span>` : `<span class="charge-item-date charge-item-date--pending">⏳ Pendiente de cobro</span>`}
+      </div>
+      <div class="charge-item-center">
+        <span class="charge-item-label">VALOR MES</span>
+        <strong class="charge-item-amount">${amountFmt}</strong>
       </div>
       <div class="charge-item-actions">
         <button class="charge-status-btn charge-btn--pending ${isPending ? "charge-btn--active" : ""}"
