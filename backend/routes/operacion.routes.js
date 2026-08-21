@@ -71,12 +71,20 @@ function serializeTurn(row) {
 function serializeMonthly(row) {
   return {
     id: row.id, ticketNumber: Number(row.ticket_numero), plate: row.placa,
-    vehicleType: row.tipo_vehiculo, startDate: row.fecha_inicio, expiryDate: row.fecha_vencimiento,
+    // PostgreSQL DATE puede llegar como Date y JSON lo convierte en una fecha-hora
+    // ISO. La interfaz trabaja con fechas de calendario (YYYY-MM-DD), no con horas.
+    vehicleType: row.tipo_vehiculo, startDate: serializeDate(row.fecha_inicio), expiryDate: serializeDate(row.fecha_vencimiento),
     monthlyRate: Number(row.tarifa_mensual), user: row.creado_por_nombre,
     responsible: row.responsable, document: row.documento, contact: row.contacto, address: row.direccion,
-    createdAt: new Date(row.creado_en).toISOString(), closedDate: row.cerrada_en,
+    createdAt: new Date(row.creado_en).toISOString(), closedDate: serializeDate(row.cerrada_en),
     closedReason: row.motivo_cierre,
   };
+}
+
+function serializeDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
 }
 
 function serializeMonthlyCharge(row) {

@@ -565,7 +565,10 @@ async function handleChargeStatusUpdate(chargeId, status) {
 
   try {
     if (MPTStorage.hasJwtSession()) {
-      await MPTStorage.updateMonthlyCharge(chargeId, status);
+      // setMonthlyChargeStatus es el método público original. Mantener esta
+      // llamada evita depender de un alias inexistente en una copia anterior
+      // de storage.js que pueda quedar en caché tras el despliegue.
+      await MPTStorage.setMonthlyChargeStatus(chargeId, status);
     } else {
       // Modo local
       const charges = MPTStorage.getMonthlyCharges();
