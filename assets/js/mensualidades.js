@@ -994,7 +994,7 @@ monthlyForm.addEventListener("submit", async (e) => {
   const records  = getMonthlyRecords();
   const existing = records.find((r) => normalizePlate(r.plate) === plate);
   if (existing) {
-    mFormMessage.textContent = `La placa ${plate} ya tiene una mensualidad activa (MEN-${existing.ticketNumber}).`;
+    mFormMessage.textContent = `La placa ${plate} ya tiene una mensualidad activa (MEN-${existing.ticketNumber}). Si corresponde a un periodo vencido, usa el botón RENOVAR en Conductores de Mensualidades.`;
     mPlacaInput.focus();
     return;
   }

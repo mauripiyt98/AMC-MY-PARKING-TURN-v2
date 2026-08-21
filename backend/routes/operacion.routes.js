@@ -191,6 +191,19 @@ router.post('/mensualidades', requirePrincipalOperator, async (req, res, next) =
     const document = String(req.body.document || '').trim().slice(0, 20);
     const contact = String(req.body.contact || '').trim().slice(0, 20);
     const address = String(req.body.address || '').trim().slice(0, 150);
+    const { rows: existingRows } = await req.dbClient.query(
+      `SELECT ticket_numero, estado FROM mensualidades
+       WHERE parqueadero_id = $1 AND placa = $2
+       ORDER BY creado_en DESC LIMIT 1`,
+      [req.parqueaderoId, plate]
+    );
+    if (existingRows[0]) {
+      const existing = existingRows[0];
+      if (existing.estado === 'ACTIVA') {
+        throw new ConflictError(`La placa ${plate} ya tiene una mensualidad activa (MEN-${existing.ticket_numero}).`);
+      }
+      throw new ConflictError(`La placa ${plate} ya tiene un registro anterior (MEN-${existing.ticket_numero}). Usa el botón RENOVAR para crear la siguiente mensualidad.`);
+    }
     const driverId = await upsertMonthlyDriver(req.dbClient, req.parqueaderoId, { responsible, document, contact, address });
     const ticket = await nextTicket(req, 'mensualidades');
     const { rows } = await req.dbClient.query(
@@ -220,8 +233,10 @@ router.post('/mensualidades/:id/renovar', requirePrincipalOperator, async (req, 
 
     const ticket = await nextTicket(req, 'mensualidades');
     const { rows } = await req.dbClient.query(
-      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, conductor_id, renovacion_de_id, creado_por_id, creado_por_nombre)
-       VALUES ($1,$2,$3,$4,$5,($5::date + INTERVAL '1 month')::date,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      `WITH periodo AS (SELECT $5::date AS fecha_inicio)
+       INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, conductor_id, renovacion_de_id, creado_por_id, creado_por_nombre)
+       SELECT $1,$2,$3,$4,periodo.fecha_inicio,(periodo.fecha_inicio + INTERVAL '1 month')::date,$6,$7,$8,$9,$10,$11,$12,$13,$14
+       FROM periodo RETURNING *`,
       [req.parqueaderoId, ticket, previous.placa, previous.tipo_vehiculo, previous.fecha_vencimiento, previous.tarifa_mensual, previous.responsable, previous.documento, previous.contacto, previous.direccion, previous.conductor_id, previous.id, req.user.id, req.user.nombre]
     );
     const charge = await createMonthlyCharge(req.dbClient, rows[0]);
