@@ -25,6 +25,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON usuarios TO mpt_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON sesiones_jwt TO mpt_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON turnos TO mpt_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON mensualidades TO mpt_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON conductores_mensualidades TO mpt_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON gestion_cobros_mensualidades TO mpt_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON documentos_generados TO mpt_app;
 
 -- La auditoría solo es consultable y anexable por la aplicación.

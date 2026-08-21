@@ -96,11 +96,23 @@ function serializeMonthlyCharge(row) {
 
 async function createMonthlyCharge(client, monthly) {
   const { rows } = await client.query(
-    `INSERT INTO mensualidad_cobros (parqueadero_id, mensualidad_id, valor)
-     VALUES ($1, $2, $3) RETURNING *`,
-    [monthly.parqueadero_id, monthly.id, monthly.tarifa_mensual]
+    `INSERT INTO gestion_cobros_mensualidades (parqueadero_id, mensualidad_id, conductor_id, valor)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [monthly.parqueadero_id, monthly.id, monthly.conductor_id || null, monthly.tarifa_mensual]
   );
   return rows[0];
+}
+
+async function upsertMonthlyDriver(client, parqueaderoId, { responsible, document, contact, address }) {
+  const { rows } = await client.query(
+    `INSERT INTO conductores_mensualidades (parqueadero_id, nombre, documento, contacto, direccion)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (parqueadero_id, documento) WHERE documento IS NOT NULL AND documento <> ''
+     DO UPDATE SET nombre = EXCLUDED.nombre, contacto = EXCLUDED.contacto, direccion = EXCLUDED.direccion
+     RETURNING id`,
+    [parqueaderoId, responsible || 'CONDUCTOR SIN NOMBRE', document || null, contact || null, address || null]
+  );
+  return rows[0].id;
 }
 
 router.get('/estado', async (req, res, next) => {
@@ -110,7 +122,7 @@ router.get('/estado', async (req, res, next) => {
     const monthly = await req.dbClient.query(
       `SELECT * FROM mensualidades WHERE parqueadero_id = $1 ORDER BY creado_en DESC`, [req.parqueaderoId]);
     const monthlyCharges = await req.dbClient.query(
-      `SELECT * FROM mensualidad_cobros WHERE parqueadero_id = $1 ORDER BY creado_en DESC`, [req.parqueaderoId]);
+      `SELECT * FROM gestion_cobros_mensualidades WHERE parqueadero_id = $1 ORDER BY creado_en DESC`, [req.parqueaderoId]);
     res.json({ success: true,
       records: rows.filter((r) => r.estado === 'ACTIVO').map(serializeTurn),
       history: rows.filter((r) => r.estado === 'FINALIZADO').map(serializeTurn),
@@ -179,11 +191,12 @@ router.post('/mensualidades', requirePrincipalOperator, async (req, res, next) =
     const document = String(req.body.document || '').trim().slice(0, 20);
     const contact = String(req.body.contact || '').trim().slice(0, 20);
     const address = String(req.body.address || '').trim().slice(0, 150);
+    const driverId = await upsertMonthlyDriver(req.dbClient, req.parqueaderoId, { responsible, document, contact, address });
     const ticket = await nextTicket(req, 'mensualidades');
     const { rows } = await req.dbClient.query(
-      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, creado_por_id, creado_por_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0,20), req.body.startDate, req.body.expiryDate, Number(req.body.monthlyRate), responsible || null, document || null, contact || null, address || null, req.user.id, req.user.nombre]
+      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, conductor_id, creado_por_id, creado_por_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [req.parqueaderoId, ticket, plate, String(req.body.vehicleType).slice(0,20), req.body.startDate, req.body.expiryDate, Number(req.body.monthlyRate), responsible || null, document || null, contact || null, address || null, driverId, req.user.id, req.user.nombre]
     );
     const charge = await createMonthlyCharge(req.dbClient, rows[0]);
     await audit(req, 'MENSUALIDAD_CREADA', 'mensualidades', rows[0].id, { placa: plate });
@@ -207,9 +220,9 @@ router.post('/mensualidades/:id/renovar', requirePrincipalOperator, async (req, 
 
     const ticket = await nextTicket(req, 'mensualidades');
     const { rows } = await req.dbClient.query(
-      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, renovacion_de_id, creado_por_id, creado_por_nombre)
-       VALUES ($1,$2,$3,$4,$5,($5::date + INTERVAL '1 month')::date,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [req.parqueaderoId, ticket, previous.placa, previous.tipo_vehiculo, previous.fecha_vencimiento, previous.tarifa_mensual, previous.responsable, previous.documento, previous.contacto, previous.direccion, previous.id, req.user.id, req.user.nombre]
+      `INSERT INTO mensualidades (parqueadero_id, ticket_numero, placa, tipo_vehiculo, fecha_inicio, fecha_vencimiento, tarifa_mensual, responsable, documento, contacto, direccion, conductor_id, renovacion_de_id, creado_por_id, creado_por_nombre)
+       VALUES ($1,$2,$3,$4,$5,($5::date + INTERVAL '1 month')::date,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [req.parqueaderoId, ticket, previous.placa, previous.tipo_vehiculo, previous.fecha_vencimiento, previous.tarifa_mensual, previous.responsable, previous.documento, previous.contacto, previous.direccion, previous.conductor_id, previous.id, req.user.id, req.user.nombre]
     );
     const charge = await createMonthlyCharge(req.dbClient, rows[0]);
     await audit(req, 'MENSUALIDAD_RENOVADA', 'mensualidades', rows[0].id, { renovacion_de_id: previous.id, ticket });
@@ -223,13 +236,13 @@ router.patch('/mensualidad-cobros/:id', requirePrincipalOperator, async (req, re
       throw new ValidationError('Estado de cobro inválido.');
     }
     const { rows } = await req.dbClient.query(
-      `UPDATE mensualidad_cobros
+      `UPDATE gestion_cobros_mensualidades
        SET estado = $1, pagado_en = CASE WHEN $1 = 'PAGADO' THEN NOW() ELSE NULL END
        WHERE id = $2 AND parqueadero_id = $3 RETURNING *`,
       [req.body.status, req.params.id, req.parqueaderoId]
     );
     if (!rows[0]) throw new NotFoundError('Cobro de mensualidad');
-    await audit(req, 'COBRO_MENSUALIDAD_ACTUALIZADO', 'mensualidad_cobros', rows[0].id, { status: rows[0].estado });
+    await audit(req, 'COBRO_MENSUALIDAD_ACTUALIZADO', 'gestion_cobros_mensualidades', rows[0].id, { status: rows[0].estado });
     res.json({ success: true, charge: serializeMonthlyCharge(rows[0]) });
   } catch (err) { next(err); }
 });

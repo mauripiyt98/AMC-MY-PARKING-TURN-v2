@@ -4,7 +4,7 @@ require('dotenv').config();
 const { Pool } = require('pg');
 const { getDbConfig } = require('../db/config');
 
-const REQUIRED_RLS_TABLES = ['usuarios', 'sesiones_jwt', 'turnos', 'mensualidades', 'documentos_generados', 'auditoria_eventos'];
+const REQUIRED_RLS_TABLES = ['usuarios', 'sesiones_jwt', 'turnos', 'mensualidades', 'conductores_mensualidades', 'gestion_cobros_mensualidades', 'documentos_generados', 'auditoria_eventos'];
 
 async function main() {
   if (process.env.NODE_ENV !== 'production') {
