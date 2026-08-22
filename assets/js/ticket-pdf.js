@@ -9,7 +9,8 @@
 
   const PDF_WIDTH = 288;
   const PDF_HEIGHT = 432;
-  const LOGO_SIZE = 96;
+  const LOGO_WIDTH = 144;
+  const LOGO_HEIGHT = 72;
   const LOGO_URL = new URL('../img/LOGOMPT.png', document.currentScript?.src || global.location.href).href;
 
   function text(value) {
@@ -38,12 +39,12 @@
       const image = new Image();
       image.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = LOGO_SIZE;
-        canvas.height = LOGO_SIZE;
+        canvas.width = LOGO_WIDTH;
+        canvas.height = LOGO_HEIGHT;
         const context = canvas.getContext('2d');
         context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, LOGO_SIZE, LOGO_SIZE);
-        context.drawImage(image, 0, 0, LOGO_SIZE, LOGO_SIZE);
+        context.fillRect(0, 0, LOGO_WIDTH, LOGO_HEIGHT);
+        context.drawImage(image, 0, 0, LOGO_WIDTH, LOGO_HEIGHT);
         const bytes = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', 0.92).split(',')[1]), (character) => character.charCodeAt(0));
         resolve(bytes);
       };
@@ -75,45 +76,38 @@
     return `Ticket_${ticket}_${plate}_${ticketDate(record)}.pdf`;
   }
 
-  function buildPdf(record, logoBytes) {
-    const lines = [
-      ['MY PARKING TURN', 16],
-      ['COMPROBANTE DE SALIDA', 11],
-      ['', 9],
-      [`TICKET: ${String(record.ticketNumber || 'SIN NUMERO').padStart(6, '0')}`, 11],
-      [`PLACA: ${record.plate || 'SIN DATO'}`, 11],
-      [`VEHICULO: ${record.vehicleType || 'SIN DEFINIR'}`, 10],
-      [`FECHA INGRESO: ${record.date || 'SIN DATO'}`, 10],
-      [`HORA INGRESO: ${record.entryTime || record.time || 'SIN DATO'}`, 10],
-      [`HORA SALIDA: ${record.exitTime || 'SIN DATO'}`, 10],
-      [`TARIFA/HORA: ${formatCurrency(record.hourlyPrice)}`, 10],
-      [`HORAS COBRADAS: ${record.chargedHours || 'SIN DATO'}`, 10],
-      ['', 9],
-      [`TOTAL PAGADO: ${formatCurrency(record.totalCharged)}`, 13],
-      ['', 9],
-      [`OPERADOR: ${record.operatorName || record.user || 'SIN DATO'}`, 9],
-      ['Estado: FINALIZADO', 9],
-      ['', 9],
-      ['Gracias por utilizar nuestro servicio.', 9],
-    ];
-    let cursorY = 286;
+  function addText(commands, value, x, y, size, { bold = false, color = '0.10 0.12 0.16' } = {}) {
+    commands.push('BT', `${color} rg`, `/${bold ? 'F2' : 'F1'} ${size} Tf`, `1 0 0 1 ${x} ${y} Tm`, `(${text(value)}) Tj`, 'ET');
+  }
+
+  function buildReceiptPdf({ subtitle, details, total, operator, state }, logoBytes) {
     const commands = [
-      `q ${LOGO_SIZE} 0 0 ${LOGO_SIZE} 96 310 cm /Im1 Do Q`,
-      '36 298 m 252 298 l S',
-      'BT', '/F1 10 Tf',
+      '0.58 0.06 0.08 rg', `0 ${PDF_HEIGHT - 6} ${PDF_WIDTH} 6 re f`,
+      `q ${LOGO_WIDTH} 0 0 ${LOGO_HEIGHT} 72 350 cm /Im1 Do Q`,
+      '0.58 0.06 0.08 RG', '24 298 m 264 298 l S',
     ];
-    lines.forEach(([line, size]) => {
-      if (line) commands.push(`/F1 ${size} Tf`, `36 ${cursorY} Td (${text(line)}) Tj`, `-36 -${cursorY} Td`);
-      cursorY -= 16;
+    addText(commands, 'MY PARKING TURN', 24, 327, 17, { bold: true, color: '0.58 0.06 0.08' });
+    addText(commands, subtitle, 24, 311, 9, { bold: true, color: '0.25 0.27 0.30' });
+    addText(commands, 'DETALLE DEL SERVICIO', 24, 280, 8, { bold: true, color: '0.58 0.06 0.08' });
+    let cursorY = 263;
+    details.forEach((line) => {
+      addText(commands, line, 24, cursorY, 8.5);
+      cursorY -= 15;
     });
-    commands.push('ET');
+    commands.push('0.98 0.94 0.94 rg', '24 96 240 32 re f', '0.58 0.06 0.08 RG', '24 96 240 32 re S');
+    addText(commands, total, 34, 108, 12, { bold: true, color: '0.58 0.06 0.08' });
+    addText(commands, `OPERADOR: ${operator || 'SIN DATO'}`, 24, 75, 8, { bold: true });
+    addText(commands, `ESTADO: ${state}`, 24, 61, 8, { bold: true, color: '0.25 0.27 0.30' });
+    commands.push('0.75 0.77 0.80 RG', '24 48 m 264 48 l S');
+    addText(commands, 'Gracias por utilizar nuestro servicio.', 24, 30, 8, { color: '0.35 0.37 0.40' });
     const stream = commands.join('\n');
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH} ${PDF_HEIGHT}] /Resources << /Font << /F1 4 0 R >> /XObject << /Im1 5 0 R >> >> /Contents 6 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH} ${PDF_HEIGHT}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> /XObject << /Im1 6 0 R >> >> /Contents 7 0 R >>`,
       '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-      `<< /Type /XObject /Subtype /Image /Width ${LOGO_SIZE} /Height ${LOGO_SIZE} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBytes.length} >>\nstream\n${asBinaryString(logoBytes)}\nendstream`,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+      `<< /Type /XObject /Subtype /Image /Width ${LOGO_WIDTH} /Height ${LOGO_HEIGHT} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBytes.length} >>\nstream\n${asBinaryString(logoBytes)}\nendstream`,
       `<< /Length ${asPdfBytes(stream).length} >>\nstream\n${stream}\nendstream`,
     ];
     let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
@@ -127,6 +121,25 @@
     offsets.slice(1).forEach((offset) => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; });
     pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
     return new Blob([asPdfBytes(pdf)], { type: 'application/pdf' });
+  }
+
+  function buildPdf(record, logoBytes) {
+    return buildReceiptPdf({
+      subtitle: 'COMPROBANTE DE SALIDA',
+      details: [
+        `TICKET: ${String(record.ticketNumber || 'SIN NUMERO').padStart(6, '0')}`,
+        `PLACA: ${record.plate || 'SIN DATO'}`,
+        `VEHICULO: ${record.vehicleType || 'SIN DEFINIR'}`,
+        `FECHA INGRESO: ${record.date || 'SIN DATO'}`,
+        `HORA INGRESO: ${record.entryTime || record.time || 'SIN DATO'}`,
+        `HORA SALIDA: ${record.exitTime || 'SIN DATO'}`,
+        `TARIFA/HORA: ${formatCurrency(record.hourlyPrice)}`,
+        `HORAS COBRADAS: ${record.chargedHours || 'SIN DATO'}`,
+      ],
+      total: `TOTAL PAGADO: ${formatCurrency(record.totalCharged)}`,
+      operator: record.operatorName || record.user,
+      state: 'FINALIZADO',
+    }, logoBytes);
   }
 
   async function download(record) {
@@ -152,55 +165,20 @@
   }
 
   function buildMonthlyPdf(record, logoBytes) {
-    const lines = [
-      ['MY PARKING TURN', 16],
-      ['COMPROBANTE MENSUALIDAD', 11],
-      ['', 9],
-      [`TICKET: ${String(record.ticketNumber || 'SIN NUMERO')}`, 11],
-      [`PLACA: ${record.plate || 'SIN DATO'}`, 11],
-      [`VEHICULO: ${record.vehicleType || 'SIN DEFINIR'}`, 10],
-      [`FECHA INICIO: ${record.startDate || 'SIN DATO'}`, 10],
-      [`FECHA CIERRE: ${record.closedDate || record.expiryDate || 'SIN DATO'}`, 10],
-      [`MOTIVO CIERRE: ${record.closedReason || 'CIERRE MANUAL'}`, 10],
-      ['', 9],
-      [`TARIFA MENSUAL: ${formatCurrency(record.monthlyRate)}`, 13],
-      ['', 9],
-      [`OPERADOR: ${record.user || 'SIN DATO'}`, 9],
-      ['Estado: FINALIZADO', 9],
-      ['', 9],
-      ['Gracias por utilizar nuestro servicio.', 9],
-    ];
-    let cursorY = 286;
-    const commands = [
-      `q ${LOGO_SIZE} 0 0 ${LOGO_SIZE} 96 310 cm /Im1 Do Q`,
-      '36 298 m 252 298 l S',
-      'BT', '/F1 10 Tf',
-    ];
-    lines.forEach(([line, size]) => {
-      if (line) commands.push(`/F1 ${size} Tf`, `36 ${cursorY} Td (${text(line)}) Tj`, `-36 -${cursorY} Td`);
-      cursorY -= 16;
-    });
-    commands.push('ET');
-    const stream = commands.join('\n');
-    const objects = [
-      '<< /Type /Catalog /Pages 2 0 R >>',
-      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH} ${PDF_HEIGHT}] /Resources << /Font << /F1 4 0 R >> /XObject << /Im1 5 0 R >> >> /Contents 6 0 R >>`,
-      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-      `<< /Type /XObject /Subtype /Image /Width ${LOGO_SIZE} /Height ${LOGO_SIZE} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBytes.length} >>\nstream\n${asBinaryString(logoBytes)}\nendstream`,
-      `<< /Length ${asPdfBytes(stream).length} >>\nstream\n${stream}\nendstream`,
-    ];
-    let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
-    const offsets = [0];
-    objects.forEach((object, index) => {
-      offsets.push(asPdfBytes(pdf).length);
-      pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-    });
-    const xrefOffset = asPdfBytes(pdf).length;
-    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-    offsets.slice(1).forEach((offset) => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; });
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-    return new Blob([asPdfBytes(pdf)], { type: 'application/pdf' });
+    return buildReceiptPdf({
+      subtitle: 'COMPROBANTE DE MENSUALIDAD',
+      details: [
+        `TICKET: ${String(record.ticketNumber || 'SIN NUMERO')}`,
+        `PLACA: ${record.plate || 'SIN DATO'}`,
+        `VEHICULO: ${record.vehicleType || 'SIN DEFINIR'}`,
+        `FECHA INICIO: ${record.startDate || 'SIN DATO'}`,
+        `FECHA CIERRE: ${record.closedDate || record.expiryDate || 'SIN DATO'}`,
+        `MOTIVO CIERRE: ${record.closedReason || 'CIERRE MANUAL'}`,
+      ],
+      total: `TARIFA MENSUAL: ${formatCurrency(record.monthlyRate)}`,
+      operator: record.user,
+      state: 'FINALIZADO',
+    }, logoBytes);
   }
 
   async function downloadMonthly(record) {
