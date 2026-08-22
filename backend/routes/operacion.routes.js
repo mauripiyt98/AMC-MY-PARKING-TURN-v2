@@ -251,8 +251,11 @@ router.patch('/mensualidad-cobros/:id', requirePrincipalOperator, async (req, re
       throw new ValidationError('Estado de cobro inválido.');
     }
     const { rows } = await req.dbClient.query(
-      `UPDATE gestion_cobros_mensualidades
-       SET estado = $1, pagado_en = CASE WHEN $1 = 'PAGADO' THEN NOW() ELSE NULL END
+      `WITH cambio AS (SELECT $1::varchar(20) AS estado)
+       UPDATE gestion_cobros_mensualidades
+       SET estado = cambio.estado,
+           pagado_en = CASE WHEN cambio.estado = 'PAGADO'::varchar(20) THEN NOW() ELSE NULL END
+       FROM cambio
        WHERE id = $2 AND parqueadero_id = $3 RETURNING *`,
       [req.body.status, req.params.id, req.parqueaderoId]
     );
