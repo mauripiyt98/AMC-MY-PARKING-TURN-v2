@@ -354,12 +354,40 @@ function renderHistory() {
 // RENDER CONDUCTORES  (incluye GESTIONAR COBROS y RENOVAR)
 // ================================================================
 
+function belongsToMonthlyDriver(record, candidate) {
+  return (
+    (record.document && candidate.document && String(record.document).trim() === String(candidate.document).trim()) ||
+    (record.plate && candidate.plate && String(record.plate).trim().toUpperCase() === String(candidate.plate).trim().toUpperCase()) ||
+    (record.id && candidate.id && String(record.id) === String(candidate.id)) ||
+    (record.ticketNumber && candidate.ticketNumber && Number(record.ticketNumber) === Number(candidate.ticketNumber))
+  );
+}
+
+function getMonthlyDriverPaymentStatus(record, allRecords, charges) {
+  const driverRecords = allRecords.filter((candidate) => belongsToMonthlyDriver(record, candidate));
+  const chargeForRecord = (monthlyRecord) => charges.find((charge) => (
+    (monthlyRecord.id && String(charge.monthlyId) === String(monthlyRecord.id)) ||
+    (charge.ticketNumber && Number(charge.ticketNumber) === Number(monthlyRecord.ticketNumber)) ||
+    String(charge.id) === `charge-${monthlyRecord.id || `ticket-${monthlyRecord.ticketNumber}`}`
+  ));
+
+  const hasPendingPayment = driverRecords.length === 0 || driverRecords.some((monthlyRecord) => {
+    const charge = chargeForRecord(monthlyRecord);
+    return !charge || charge.status !== 'PAGADO';
+  });
+
+  return hasPendingPayment
+    ? '<span class="monthly-driver-payment-status monthly-driver-payment-status--pending">PENDIENTE</span>'
+    : '<span class="monthly-driver-payment-status monthly-driver-payment-status--current">AL DÍA</span>';
+}
+
 function renderMonthlyDrivers() {
   if (!monthlyDriversList) return;
 
   const today       = getTodayStr();
   const activeRecords = getMonthlyRecords();
   const historyRecords = getMonthlyHistory();
+  const monthlyCharges = MPTStorage.getMonthlyCharges ? MPTStorage.getMonthlyCharges() : [];
   const activeIds   = new Set(activeRecords.map((r) => r.id || `ticket-${r.ticketNumber}`));
 
   const allRecords  = [...activeRecords, ...historyRecords]
@@ -393,6 +421,7 @@ function renderMonthlyDrivers() {
     const statusBadge = isActive
       ? '<span class="monthly-driver-status monthly-driver-status--active">ACTIVA</span>'
       : `<span class="monthly-driver-status monthly-driver-status--expired">${record.expiryDate < today ? "VENCIDA" : "FINALIZADA"}</span>`;
+    const paymentStatusBadge = getMonthlyDriverPaymentStatus(record, allRecords, monthlyCharges);
 
     // Botón RENOVAR: deshabilitado si está activa, habilitado si está vencida/finalizada
     const renewBtn = isActive
@@ -402,7 +431,10 @@ function renderMonthlyDrivers() {
     return `<article class="monthly-driver-card">
       <div class="monthly-driver-card__header">
         <strong>MEN-${escapeHtml(record.ticketNumber)}</strong>
-        ${statusBadge}
+        <div class="monthly-driver-card__badges">
+          ${paymentStatusBadge}
+          ${statusBadge}
+        </div>
         <div class="monthly-driver-card__actions">
           <button class="manage-charges-btn" data-record-key="${escapeHtml(recordId)}" type="button">💰 GESTIONAR COBROS</button>
           ${renewBtn}

@@ -1573,6 +1573,36 @@ body:has(.report-panel) .report-panel {
   background: linear-gradient(180deg, #c9252b, #8d171b);
 }
 
+.monthly-driver-card__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.monthly-driver-payment-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.monthly-driver-payment-status--current {
+  border: 1px solid #71bf8a;
+  background: linear-gradient(180deg, #dff7e5, #b9edc8);
+  color: #176b35;
+}
+
+.monthly-driver-payment-status--pending {
+  border: 1px solid #d66a3b;
+  background: linear-gradient(180deg, #ffb36d, #e96545);
+  color: #5a1d13;
+}
+
 .monthly-drivers-empty {
   margin: 18px 0 0;
   color: var(--color-muted);
@@ -2392,4 +2422,3 @@ body:has(.report-panel) .report-panel {
 :root[data-theme="dark"] .charge-btn--paid {
   background: #0f172a;
 }
-
